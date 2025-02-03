@@ -1,0 +1,30 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "test",
+            "type": "shell",
+            "command": "cargo build && ./writing-a-c-compiler-tests/test_compiler ./target/debug/rc --chapter ${input:chapter} --stage ${input:stage}"
+        }
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "chapter",
+            "description": "chapter",
+            "default": "1"
+        },
+        {
+            "type": "pickString",
+            "id": "stage",
+            "description": "stage",
+            "options": [
+                "lex",
+                "parse",
+            ],
+            "default": "lex"
+        }
+    ]
+}
