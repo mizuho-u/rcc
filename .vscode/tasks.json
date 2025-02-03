@@ -23,6 +23,7 @@
             "options": [
                 "lex",
                 "parse",
+                "codegen"
             ],
             "default": "lex"
         }
