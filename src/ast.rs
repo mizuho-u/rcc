@@ -10,11 +10,11 @@ pub enum Function {
 
 #[derive(PartialEq, Debug)]
 pub enum Statement {
-    Return(Exp),
+    Return(Expression),
 }
 
 #[derive(PartialEq, Debug)]
-pub enum Exp {
+pub enum Expression {
     Constant(i32),
 }
 

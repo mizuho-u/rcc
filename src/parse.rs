@@ -40,7 +40,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<ast::Statement, ParseError
     Ok(ast::Statement::Return(e))
 }
 
-fn parse_expression(tokens: &mut Vec<Token>) -> Result<ast::Exp, ParseError> {
+fn parse_expression(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> {
     let t = expect_fn(tokens, |t| {
         if let Token::Constant(_) = *t {
             true
@@ -50,7 +50,7 @@ fn parse_expression(tokens: &mut Vec<Token>) -> Result<ast::Exp, ParseError> {
     })?;
 
     match t {
-        Token::Constant(n) => Ok(ast::Exp::Constant(n)),
+        Token::Constant(n) => Ok(ast::Expression::Constant(n)),
         _ => Err(ParseError {
             s: format!("not implemented yet {:?}", t),
         }),
@@ -112,7 +112,7 @@ mod tests {
                 Identifier {
                     s: "main".to_string()
                 },
-                ast::Statement::Return(ast::Exp::Constant(1))
+                ast::Statement::Return(ast::Expression::Constant(1))
             ))
         )
     }
