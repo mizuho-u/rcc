@@ -6,8 +6,13 @@
         {
             "label": "test",
             "type": "shell",
+            "command": "cargo build && ./writing-a-c-compiler-tests/test_compiler ./target/debug/rc --chapter ${input:chapter}"
+        },
+        {
+            "label": "test stage",
+            "type": "shell",
             "command": "cargo build && ./writing-a-c-compiler-tests/test_compiler ./target/debug/rc --chapter ${input:chapter} --stage ${input:stage}"
-        }
+        },
     ],
     "inputs": [
         {
