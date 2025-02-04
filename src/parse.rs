@@ -9,7 +9,15 @@ pub struct ParseError {
 }
 
 pub fn parse(tokens: &mut Vec<Token>) -> Result<ast::Program, ParseError> {
-    parse_program(tokens)
+    let p = parse_program(tokens)?;
+
+    if tokens.len() >= 1 {
+        Err(ParseError {
+            s: format!("some tokens remaining {:?}", tokens),
+        })
+    } else {
+        Ok(p)
+    }
 }
 
 fn parse_program(tokens: &mut Vec<Token>) -> Result<ast::Program, ParseError> {

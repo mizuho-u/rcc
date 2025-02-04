@@ -1,8 +1,9 @@
 use clap::Parser;
-use rc::{parse, token::tokenize};
+use rc::{asm, codegen, parse, token::tokenize};
 use std::{
+    io::Write,
     path::PathBuf,
-    process::{exit, Command},
+    process::{exit, Command, Stdio},
 };
 
 #[derive(Parser, Debug)]
@@ -19,46 +20,54 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let abs_path = args.file.canonicalize().expect("invalid file path");
-    let abs_path = abs_path.to_str().unwrap();
+    let source_path = args.file.canonicalize().expect("invalid file path");
+    let source = source_path.to_str().unwrap();
 
     let preprocess = Command::new("gcc")
-        .args(&["-E", "-P", abs_path, "-o", "-"])
+        .args(&["-E", "-P", source, "-o", "-"])
         .output()
         .expect("failed to start command");
 
-    let mut _ts = tokenize(preprocess.stdout).unwrap_or_else(|_| exit(1));
+    let mut ts = tokenize(preprocess.stdout).unwrap_or_else(|_| exit(1));
 
-    if let Some(_) = args.lex {
+    if matches!(args.lex, Some(true)) {
         return;
     }
 
-    let mut _p = parse::parse(&mut _ts).unwrap();
+    let p = parse::parse(&mut ts).unwrap_or_else(|_| exit(1));
 
-    if let Some(_) = args.parse {
+    if matches!(args.parse, Some(true)) {
         return;
     }
 
-    if let Some(_) = args.codegen {
+    let p = asm::convert(p).unwrap_or_else(|_| exit(1));
+    let code = codegen::generate(p).unwrap_or_else(|_| exit(1));
+
+    if matches!(args.codegen, Some(true)) {
         return;
     }
 
-    // let mut assemble = Command::new("gcc")
-    //     .args(&["-x", "c", "-", "-o", "out"])
-    //     .stdin(Stdio::piped())
-    //     .stdout(Stdio::piped())
-    //     .spawn()
-    //     .expect("failed to spawn command");
+    let exe_dir = source_path.parent().unwrap();
+    let exe_file = source_path.file_stem().unwrap();
+    let exe_path = exe_dir.join(exe_file);
+    let exe_path = exe_path.to_str().unwrap();
 
-    // // 一時ファイル作るのが面倒なので標準入力でなんとかする
-    // assemble
-    //     .stdin
-    //     .as_mut()
-    //     .unwrap()
-    //     .write_all(&preprocess.stdout)
-    //     .expect("failed pass assembly to assemble");
+    let mut assemble = Command::new("gcc")
+        .args(&["-x", "assembler", "-", "-o", exe_path])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn command");
 
-    // let output = assemble.wait_with_output().expect("failed to assemble");
+    // 一時ファイル作るのが面倒なので標準入力でなんとかする
+    assemble
+        .stdin
+        .as_mut()
+        .unwrap()
+        .write_all(code.as_bytes())
+        .expect("failed pass assembly to assemble");
 
-    // println!("{}", String::from_utf8_lossy(&output.stdout));
+    let output = assemble.wait_with_output().expect("failed to assemble");
+
+    println!("{}", String::from_utf8_lossy(&output.stdout));
 }
