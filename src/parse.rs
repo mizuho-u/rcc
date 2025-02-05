@@ -49,19 +49,43 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<ast::Statement, ParseError
 }
 
 fn parse_expression(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> {
-    let t = expect_fn(tokens, |t| {
-        if let Token::Constant(_) = *t {
-            true
-        } else {
-            false
-        }
-    })?;
+    let next: &Token = peek(tokens);
 
-    match t {
-        Token::Constant(n) => Ok(ast::Expression::Constant(n)),
-        _ => Err(ParseError {
-            s: format!("not implemented yet {:?}", t),
-        }),
+    match *next {
+        Token::Constant(n) => {
+            consume(tokens);
+            Ok(ast::Expression::Constant(n))
+        }
+        Token::BitwiseComplementOperator => {
+            consume(tokens);
+            let exp = parse_expression(tokens)?;
+
+            Ok(ast::Expression::Unary(
+                ast::UnaryOperator::Complement,
+                Box::new(exp),
+            ))
+        }
+        Token::NegationOperator => {
+            consume(tokens);
+            let exp = parse_expression(tokens)?;
+
+            Ok(ast::Expression::Unary(
+                ast::UnaryOperator::Negate,
+                Box::new(exp),
+            ))
+        }
+        // Token::DecrementOperator => todo!(),
+        Token::OpenParen => {
+            consume(tokens);
+            let exp = parse_expression(tokens)?;
+            expect(tokens, Token::CloseParen)?;
+            Ok(exp)
+        }
+        _ => {
+            return Err(ParseError {
+                s: format!("Malformed expression {:?}", next),
+            })
+        }
     }
 }
 
@@ -100,6 +124,10 @@ fn expect_fn(tokens: &mut Vec<Token>, cb: fn(&Token) -> bool) -> Result<Token, P
     Ok(head)
 }
 
+fn peek(tokens: &mut Vec<Token>) -> &Token {
+    &tokens[0]
+}
+
 fn consume(tokens: &mut Vec<Token>) -> Token {
     tokens.remove(0)
 }
@@ -121,6 +149,27 @@ mod tests {
                     s: "main".to_string()
                 },
                 ast::Statement::Return(ast::Expression::Constant(1))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_unary() {
+        let mut result = token::tokenize(" int main(void) { return ~(-1); } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(ast::Expression::Unary(
+                    ast::UnaryOperator::Complement,
+                    Box::new(ast::Expression::Unary(
+                        ast::UnaryOperator::Negate,
+                        Box::new(ast::Expression::Constant(1))
+                    ))
+                ))
             ))
         )
     }
