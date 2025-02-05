@@ -12,6 +12,9 @@ pub enum Token {
     OpenBrace,
     CloseBrace,
     Semicolon,
+    BitwiseComplementOperator,
+    NegationOperator,
+    DecrementOperator,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -29,6 +32,16 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
     }
 
     let s = s.trim();
+
+    if let Some(t) = find_token(s, r"^(--|~|-)", |c| match c {
+        "--" => Some(Token::DecrementOperator),
+        "~" => Some(Token::BitwiseComplementOperator),
+        "-" => Some(Token::NegationOperator),
+        _ => None,
+    }) {
+        ts.push(t.0);
+        return _tokenize(&s[t.1..], ts);
+    }
 
     if let Some(t) = find_token(s, r"^[a-zA-Z_]\w*\b", |c| match c {
         "int" => Some(Token::Int),
@@ -70,7 +83,7 @@ fn find_token(
 ) -> Option<(Token, usize)> {
     let re = Regex::new(pattern).unwrap();
     if let Some(caps) = re.captures(s) {
-        let c = caps.get(0).unwrap().as_str();
+        let c: &str = caps.get(0).unwrap().as_str();
 
         if let Some(t) = to_token(c) {
             return Some((t, c.len()));
@@ -87,7 +100,7 @@ mod tests {
 
     #[test]
     fn valid_token() {
-        let result = token::tokenize(" int main(void) { return 1; } ".into()).unwrap();
+        let result = token::tokenize(" int main(void) { return -(~~(--1)); } ".into()).unwrap();
         assert_eq!(
             result,
             vec![
@@ -98,7 +111,15 @@ mod tests {
                 Token::CloseParen,
                 Token::OpenBrace,
                 Token::Return,
+                Token::NegationOperator,
+                Token::OpenParen,
+                Token::BitwiseComplementOperator,
+                Token::BitwiseComplementOperator,
+                Token::OpenParen,
+                Token::DecrementOperator,
                 Token::Constant(1),
+                Token::CloseParen,
+                Token::CloseParen,
                 Token::Semicolon,
                 Token::CloseBrace,
             ]
