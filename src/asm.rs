@@ -73,6 +73,7 @@ fn convert_statement(s: ast::Statement) -> Result<Vec<Instruction>, AssemblyErro
 fn convert_exp(e: ast::Expression) -> Result<Operand, AssemblyError> {
     let op = match e {
         ast::Expression::Constant(n) => Operand::Immediate(n),
+        ast::Expression::Unary(unary_operator, expression) => todo!(),
     };
 
     Ok(op)
