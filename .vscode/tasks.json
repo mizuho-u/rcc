@@ -28,6 +28,7 @@
             "options": [
                 "lex",
                 "parse",
+                "tacky",
                 "codegen"
             ],
             "default": "lex"

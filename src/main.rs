@@ -1,5 +1,5 @@
 use clap::Parser;
-use rc::{asm, codegen, parse, token::tokenize};
+use rc::{asm, codegen, parse, tacky, token::tokenize};
 use std::{
     io::Write,
     path::PathBuf,
@@ -13,6 +13,8 @@ struct Args {
     lex: Option<bool>,
     #[arg(long, action = clap::ArgAction::SetTrue)]
     parse: Option<bool>,
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    tacky: Option<bool>,
     #[arg(long, action = clap::ArgAction::SetTrue)]
     codegen: Option<bool>,
 }
@@ -40,34 +42,40 @@ fn main() {
         return;
     }
 
-    let p = asm::convert(p).unwrap_or_else(|_| exit(1));
-    let code = codegen::generate(p).unwrap_or_else(|_| exit(1));
+    tacky::convert(p).unwrap_or_else(|_| exit(1));
 
-    if matches!(args.codegen, Some(true)) {
+    if matches!(args.tacky, Some(true)) {
         return;
     }
 
-    let exe_dir = source_path.parent().unwrap();
-    let exe_file = source_path.file_stem().unwrap();
-    let exe_path = exe_dir.join(exe_file);
-    let exe_path = exe_path.to_str().unwrap();
+    // let p = asm::convert(p).unwrap_or_else(|_| exit(1));
+    // let code = codegen::generate(p).unwrap_or_else(|_| exit(1));
 
-    let mut assemble = Command::new("gcc")
-        .args(&["-x", "assembler", "-", "-o", exe_path])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("failed to spawn command");
+    // if matches!(args.codegen, Some(true)) {
+    //     return;
+    // }
 
-    // 一時ファイル作るのが面倒なので標準入力でなんとかする
-    assemble
-        .stdin
-        .as_mut()
-        .unwrap()
-        .write_all(code.as_bytes())
-        .expect("failed pass assembly to assemble");
+    // let exe_dir = source_path.parent().unwrap();
+    // let exe_file = source_path.file_stem().unwrap();
+    // let exe_path = exe_dir.join(exe_file);
+    // let exe_path = exe_path.to_str().unwrap();
 
-    let output = assemble.wait_with_output().expect("failed to assemble");
+    // let mut assemble = Command::new("gcc")
+    //     .args(&["-x", "assembler", "-", "-o", exe_path])
+    //     .stdin(Stdio::piped())
+    //     .stdout(Stdio::piped())
+    //     .spawn()
+    //     .expect("failed to spawn command");
 
-    println!("{}", String::from_utf8_lossy(&output.stdout));
+    // // 一時ファイル作るのが面倒なので標準入力でなんとかする
+    // assemble
+    //     .stdin
+    //     .as_mut()
+    //     .unwrap()
+    //     .write_all(code.as_bytes())
+    //     .expect("failed pass assembly to assemble");
+
+    // let output = assemble.wait_with_output().expect("failed to assemble");
+
+    // println!("{}", String::from_utf8_lossy(&output.stdout));
 }
