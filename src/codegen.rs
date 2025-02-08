@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use crate::asm::{Function, Instruction, Operand, Program, UnaryOperator};
 
 #[derive(Debug)]
