@@ -17,12 +17,22 @@ pub enum Statement {
 pub enum Expression {
     Constant(i32),
     Unary(UnaryOperator, Box<Expression>),
+    Binary(BinaryOperator, Box<Expression>, Box<Expression>),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum UnaryOperator {
     Complement,
     Negate,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum BinaryOperator {
+    Subtract,
+    Add,
+    Multiply,
+    Divide,
+    Remainder,
 }
 
 #[derive(PartialEq, Debug)]

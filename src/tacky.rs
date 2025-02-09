@@ -92,6 +92,7 @@ fn convert_exp(
 
             Ok(dst)
         }
+        ast::Expression::Binary(op, left, right) => todo!(),
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::{
-    ast,
+    ast::{self, Expression},
     token::{self, Token},
 };
 
@@ -41,11 +41,106 @@ fn parse_function(tokens: &mut Vec<Token>) -> Result<ast::Function, ParseError> 
 fn parse_statement(tokens: &mut Vec<Token>) -> Result<ast::Statement, ParseError> {
     expect(tokens, Token::Return)?;
 
-    let e = parse_expression(tokens)?;
+    let e = parse_exp(tokens, 0)?;
 
     expect(tokens, Token::Semicolon)?;
 
     Ok(ast::Statement::Return(e))
+}
+
+fn parse_factor(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> {
+    let next: &Token = peek(tokens);
+
+    match *next {
+        Token::Constant(n) => {
+            consume(tokens);
+            Ok(ast::Expression::Constant(n))
+        }
+        Token::BitwiseComplementOperator => {
+            consume(tokens);
+            let exp = parse_factor(tokens)?;
+
+            Ok(ast::Expression::Unary(
+                ast::UnaryOperator::Complement,
+                Box::new(exp),
+            ))
+        }
+        Token::NegationOperator => {
+            consume(tokens);
+            let exp = parse_factor(tokens)?;
+
+            Ok(ast::Expression::Unary(
+                ast::UnaryOperator::Negate,
+                Box::new(exp),
+            ))
+        }
+        // Token::DecrementOperator => todo!(),
+        Token::OpenParen => {
+            consume(tokens);
+            let exp = parse_exp(tokens, 0)?;
+            expect(tokens, Token::CloseParen)?;
+            Ok(exp)
+        }
+        _ => {
+            return Err(ParseError {
+                s: format!("Malformed expression {:?}", next),
+            })
+        }
+    }
+}
+
+fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<ast::Expression, ParseError> {
+    let mut left = parse_factor(tokens)?;
+
+    loop {
+        let next = peek(tokens);
+
+        if precedence(next) < min_prededence {
+            break;
+        }
+
+        match next {
+            Token::NegationOperator
+            | Token::AdditionOperator
+            | Token::DivisionOperator
+            | Token::MultiplicationOperator
+            | Token::RemainderOperator => {
+                let op = consume(tokens);
+                let right = parse_exp(tokens, precedence(&op) + 1)?;
+                left = parse_binop(op, left, right)?;
+            }
+            _ => break,
+        }
+    }
+
+    Ok(left)
+}
+
+fn parse_binop(
+    op: Token,
+    left: Expression,
+    right: Expression,
+) -> Result<ast::Expression, ParseError> {
+    let op = match op {
+        Token::NegationOperator => Ok(ast::BinaryOperator::Subtract),
+        Token::AdditionOperator => Ok(ast::BinaryOperator::Add),
+        Token::DivisionOperator => Ok(ast::BinaryOperator::Divide),
+        Token::MultiplicationOperator => Ok(ast::BinaryOperator::Multiply),
+        Token::RemainderOperator => Ok(ast::BinaryOperator::Remainder),
+        _ => Err(ParseError {
+            s: format!("not binop"),
+        }),
+    }?;
+
+    Ok(Expression::Binary(op, Box::new(left), Box::new(right)))
+}
+
+fn precedence(token: &Token) -> i32 {
+    match token {
+        Token::MultiplicationOperator | Token::DivisionOperator | Token::RemainderOperator => 50,
+        Token::AdditionOperator | Token::NegationOperator => 45,
+        _ => 0,
+    }
 }
 
 fn parse_expression(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> {
@@ -124,7 +219,7 @@ fn expect_fn(tokens: &mut Vec<Token>, cb: fn(&Token) -> bool) -> Result<Token, P
     Ok(head)
 }
 
-fn peek(tokens: &mut Vec<Token>) -> &Token {
+fn peek(tokens: &Vec<Token>) -> &Token {
     &tokens[0]
 }
 
@@ -169,6 +264,146 @@ mod tests {
                         ast::UnaryOperator::Negate,
                         Box::new(ast::Expression::Constant(1))
                     ))
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_binary1() {
+        let mut result = token::tokenize(" int main(void) { return 1+2; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(ast::Expression::Binary(
+                    ast::BinaryOperator::Add,
+                    Box::new(ast::Expression::Constant(1)),
+                    Box::new(ast::Expression::Constant(2)),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_binary2() {
+        let mut result = token::tokenize(" int main(void) { return 1+2+3; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(ast::Expression::Binary(
+                    ast::BinaryOperator::Add,
+                    Box::new(ast::Expression::Binary(
+                        ast::BinaryOperator::Add,
+                        Box::new(ast::Expression::Constant(1)),
+                        Box::new(ast::Expression::Constant(2)),
+                    )),
+                    Box::new(ast::Expression::Constant(3)),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_binary3() {
+        let mut result = token::tokenize(" int main(void) { return 1+(2+3); } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(ast::Expression::Binary(
+                    ast::BinaryOperator::Add,
+                    Box::new(ast::Expression::Constant(1)),
+                    Box::new(ast::Expression::Binary(
+                        ast::BinaryOperator::Add,
+                        Box::new(ast::Expression::Constant(2)),
+                        Box::new(ast::Expression::Constant(3)),
+                    )),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_binary4() {
+        let mut result = token::tokenize(" int main(void) { return 1+2*3; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(ast::Expression::Binary(
+                    ast::BinaryOperator::Add,
+                    Box::new(ast::Expression::Constant(1)),
+                    Box::new(ast::Expression::Binary(
+                        ast::BinaryOperator::Multiply,
+                        Box::new(ast::Expression::Constant(2)),
+                        Box::new(ast::Expression::Constant(3)),
+                    )),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_binary5() {
+        let mut result = token::tokenize(" int main(void) { return (1+2)*3; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(ast::Expression::Binary(
+                    ast::BinaryOperator::Multiply,
+                    Box::new(ast::Expression::Binary(
+                        ast::BinaryOperator::Add,
+                        Box::new(ast::Expression::Constant(1)),
+                        Box::new(ast::Expression::Constant(2)),
+                    )),
+                    Box::new(ast::Expression::Constant(3)),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_binary6() {
+        let mut result = token::tokenize(" int main(void) { return (-1+2)*~3; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(ast::Expression::Binary(
+                    ast::BinaryOperator::Multiply,
+                    Box::new(ast::Expression::Binary(
+                        ast::BinaryOperator::Add,
+                        Box::new(ast::Expression::Unary(
+                            ast::UnaryOperator::Negate,
+                            Box::new(ast::Expression::Constant(1))
+                        )),
+                        Box::new(ast::Expression::Constant(2)),
+                    )),
+                    Box::new(ast::Expression::Unary(
+                        ast::UnaryOperator::Complement,
+                        Box::new(ast::Expression::Constant(3))
+                    )),
                 ))
             ))
         )
