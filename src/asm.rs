@@ -103,6 +103,7 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                 });
                 insts.push(Instruction::Unary(op, dst));
             }
+            tacky::Instruction::Binary(op, left, right, dst) => todo!(),
         }
     }
 

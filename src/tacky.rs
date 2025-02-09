@@ -15,6 +15,7 @@ pub enum Function {
 pub enum Instruction {
     Return(Val),
     Unary(UnaryOperator, Val, Val),
+    Binary(BinaryOperator, Val, Val, Val),
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -27,6 +28,15 @@ pub enum Val {
 pub enum UnaryOperator {
     Complement,
     Negate,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum BinaryOperator {
+    Add,
+    Subtract,
+    Multiply,
+    Devide,
+    Remainder,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -92,7 +102,26 @@ fn convert_exp(
 
             Ok(dst)
         }
-        ast::Expression::Binary(op, left, right) => todo!(),
+        ast::Expression::Binary(op, left, right) => {
+            let left = convert_exp(*left, instructions)?;
+            let right = convert_exp(*right, instructions)?;
+
+            let dst = Val::Var(Identifier {
+                s: make_temporary(),
+            });
+
+            let op = match op {
+                ast::BinaryOperator::Subtract => BinaryOperator::Subtract,
+                ast::BinaryOperator::Add => BinaryOperator::Add,
+                ast::BinaryOperator::Multiply => BinaryOperator::Multiply,
+                ast::BinaryOperator::Divide => BinaryOperator::Devide,
+                ast::BinaryOperator::Remainder => BinaryOperator::Remainder,
+            };
+
+            instructions.push(Instruction::Binary(op, left, right, dst.clone()));
+
+            Ok(dst)
+        }
     }
 }
 
@@ -166,6 +195,66 @@ mod tests {
                     ),
                     tacky::Instruction::Return(tacky::Val::Var(Identifier {
                         s: "tmp.1".to_string()
+                    })),
+                ]
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_tacky_binary() {
+        let mut result =
+            token::tokenize(" int main(void) { return (1+2)*3-4/5; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            tacky::Program::Program(tacky::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                vec![
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::Add,
+                        tacky::Val::Constant(1),
+                        tacky::Val::Constant(2),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.0".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::Multiply,
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.0".to_string()
+                        }),
+                        tacky::Val::Constant(3),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.1".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::Devide,
+                        tacky::Val::Constant(4),
+                        tacky::Val::Constant(5),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.2".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::Subtract,
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.1".to_string()
+                        }),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.2".to_string()
+                        }),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.3".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Return(tacky::Val::Var(Identifier {
+                        s: "tmp.3".to_string()
                     })),
                 ]
             ))
