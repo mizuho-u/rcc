@@ -20,6 +20,9 @@ pub enum Function {
 pub enum Instruction {
     Mov { src: Operand, dst: Operand },
     Unary(UnaryOperator, Operand),
+    Binary(BinaryOperator, Operand, Operand),
+    Idiv(Operand),
+    Cdq,
     AllocateStack(i32),
     Ret,
 }
@@ -28,6 +31,13 @@ pub enum Instruction {
 pub enum UnaryOperator {
     Neg,
     Not,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum BinaryOperator {
+    Add,
+    Sub,
+    Mult,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -41,7 +51,9 @@ pub enum Operand {
 #[derive(PartialEq, Debug, Clone)]
 pub enum Register {
     AX,
+    DX,
     R10,
+    R11,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -103,11 +115,64 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                 });
                 insts.push(Instruction::Unary(op, dst));
             }
-            tacky::Instruction::Binary(op, left, right, dst) => todo!(),
+            tacky::Instruction::Binary(op, left, right, dst) => {
+                let left = convert_exp(left)?;
+                let right = convert_exp(right)?;
+                let dst = convert_exp(dst)?;
+
+                match op {
+                    tacky::BinaryOperator::Add
+                    | tacky::BinaryOperator::Subtract
+                    | tacky::BinaryOperator::Multiply => {
+                        insts.push(Instruction::Mov {
+                            src: left,
+                            dst: dst.clone(),
+                        });
+                        insts.push(Instruction::Binary(convert_binop(op)?, right, dst));
+                    }
+                    tacky::BinaryOperator::Devide => {
+                        insts.push(Instruction::Mov {
+                            src: left,
+                            dst: Operand::Reg(Register::AX),
+                        });
+                        insts.push(Instruction::Cdq);
+                        insts.push(Instruction::Idiv(right));
+                        // idivの商はEAXにセットされる
+                        insts.push(Instruction::Mov {
+                            src: Operand::Reg(Register::AX),
+                            dst: dst,
+                        });
+                    }
+                    tacky::BinaryOperator::Remainder => {
+                        insts.push(Instruction::Mov {
+                            src: left,
+                            dst: Operand::Reg(Register::AX),
+                        });
+                        insts.push(Instruction::Cdq);
+                        insts.push(Instruction::Idiv(right));
+                        // idivの余りはEDXにセットされる
+                        insts.push(Instruction::Mov {
+                            src: Operand::Reg(Register::DX),
+                            dst: dst,
+                        });
+                    }
+                };
+            }
         }
     }
 
     Ok(insts)
+}
+
+fn convert_binop(op: tacky::BinaryOperator) -> Result<BinaryOperator, AssemblyError> {
+    match op {
+        tacky::BinaryOperator::Add => Ok(BinaryOperator::Add),
+        tacky::BinaryOperator::Subtract => Ok(BinaryOperator::Sub),
+        tacky::BinaryOperator::Multiply => Ok(BinaryOperator::Mult),
+        _ => Err(AssemblyError {
+            s: format!("cannot convert binary op"),
+        }),
+    }
 }
 
 fn convert_exp(e: tacky::Val) -> Result<Operand, AssemblyError> {
@@ -135,6 +200,14 @@ fn replace_pseudo(p: &mut Program) -> Result<(), AssemblyError> {
             Instruction::Unary(_, o) => replace_operand(o)?,
             Instruction::AllocateStack(_) => {}
             Instruction::Ret => {}
+            Instruction::Binary(_, src, dst) => {
+                replace_operand(src)?;
+                replace_operand(dst)?;
+            }
+            Instruction::Idiv(operand) => {
+                replace_operand(operand)?;
+            }
+            Instruction::Cdq => {}
         }
     }
 
@@ -217,6 +290,7 @@ fn rewrite_stack_operand(
     for inst in instructions {
         match inst {
             Instruction::Mov { src, dst } => match (src, dst) {
+                // スタック -> スタックのコピーはできないのでレジスタを経由
                 (Operand::Stack(_), Operand::Stack(_)) => {
                     rewrited.push(Instruction::Mov {
                         src: src.clone(),
@@ -229,6 +303,48 @@ fn rewrite_stack_operand(
                 }
                 _ => rewrited.push(inst.clone()),
             },
+            //　divのオペランドに即値はとれない
+            Instruction::Idiv(operand) => {
+                if let Operand::Immediate(_) = operand {
+                    rewrited.push(Instruction::Mov {
+                        src: operand.clone(),
+                        dst: Operand::Reg(Register::R10),
+                    });
+                    rewrited.push(Instruction::Idiv(Operand::Reg(Register::R10)));
+                } else {
+                    rewrited.push(inst.clone());
+                }
+            }
+            //　addとsubのオペランドの両方にスタックをとることはできない
+            Instruction::Binary(op, Operand::Stack(s1), Operand::Stack(s2))
+                if (*op == BinaryOperator::Add) || (*op == BinaryOperator::Sub) =>
+            {
+                rewrited.push(Instruction::Mov {
+                    src: Operand::Stack(*s1),
+                    dst: Operand::Reg(Register::R10),
+                });
+                rewrited.push(Instruction::Binary(
+                    op.clone(),
+                    Operand::Reg(Register::R10),
+                    Operand::Stack(*s2),
+                ));
+            }
+            // mulのオペランドのdestinationにメモリは指定できない
+            Instruction::Binary(BinaryOperator::Mult, left, Operand::Stack(dst)) => {
+                rewrited.push(Instruction::Mov {
+                    src: Operand::Stack(*dst),
+                    dst: Operand::Reg(Register::R11),
+                });
+                rewrited.push(Instruction::Binary(
+                    BinaryOperator::Mult,
+                    left.clone(),
+                    Operand::Reg(Register::R11),
+                ));
+                rewrited.push(Instruction::Mov {
+                    src: Operand::Reg(Register::R11),
+                    dst: Operand::Stack(*dst),
+                });
+            }
             _ => rewrited.push(inst.clone()),
         }
     }
@@ -239,7 +355,8 @@ fn rewrite_stack_operand(
 #[cfg(test)]
 mod tests {
     use crate::asm::{
-        Function, Identifier, Instruction, Operand, Program, Register, UnaryOperator,
+        BinaryOperator, Function, Identifier, Instruction, Operand, Program, Register,
+        UnaryOperator,
     };
     use crate::parse::parse;
     use crate::tacky::convert as tconvert;
@@ -248,7 +365,7 @@ mod tests {
     use super::convert;
 
     #[test]
-    fn valid_asm() {
+    fn immediate() {
         let mut result = token::tokenize(" int main(void) { return 1; } ".into()).unwrap();
         let result = parse(&mut result).unwrap();
         let result = tconvert(result).unwrap();
@@ -304,6 +421,173 @@ mod tests {
                     Instruction::Mov {
                         src: Operand::Stack(-8),
                         dst: Operand::Reg(Register::AX)
+                    },
+                    Instruction::Ret
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn binop1() {
+        let mut result = token::tokenize(" int main(void) { return 1+2; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = tconvert(result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            Program::Program(Function::Function {
+                identifier: Identifier {
+                    s: "main".to_string()
+                },
+                instructions: vec![
+                    Instruction::AllocateStack(4),
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Stack(-4)
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Add,
+                        Operand::Immediate(2),
+                        Operand::Stack(-4)
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::AX)
+                    },
+                    Instruction::Ret
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn binop2() {
+        let mut result = token::tokenize(" int main(void) { return 1*2; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = tconvert(result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            Program::Program(Function::Function {
+                identifier: Identifier {
+                    s: "main".to_string()
+                },
+                instructions: vec![
+                    Instruction::AllocateStack(4),
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Stack(-4)
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::R11),
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Mult,
+                        Operand::Immediate(2),
+                        Operand::Reg(Register::R11)
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R11),
+                        dst: Operand::Stack(-4),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::AX)
+                    },
+                    Instruction::Ret
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn binop3() {
+        let mut result = token::tokenize(" int main(void) { return 1/2; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = tconvert(result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            Program::Program(Function::Function {
+                identifier: Identifier {
+                    s: "main".to_string()
+                },
+                instructions: vec![
+                    Instruction::AllocateStack(4),
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Reg(Register::AX),
+                    },
+                    Instruction::Cdq,
+                    Instruction::Mov {
+                        src: Operand::Immediate(2),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Idiv(Operand::Reg(Register::R10)),
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::AX),
+                        dst: Operand::Stack(-4),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::AX)
+                    },
+                    Instruction::Ret
+                ]
+            })
+        );
+    }
+
+    #[test]
+    fn binop4() {
+        let mut result =
+            token::tokenize(" int main(void) { return 2 * (3 + 4); } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = tconvert(result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            Program::Program(Function::Function {
+                identifier: Identifier {
+                    s: "main".to_string()
+                },
+                instructions: vec![
+                    Instruction::AllocateStack(8),
+                    Instruction::Mov {
+                        src: Operand::Immediate(3),
+                        dst: Operand::Stack(-4)
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Add,
+                        Operand::Immediate(4),
+                        Operand::Stack(-4)
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Immediate(2),
+                        dst: Operand::Stack(-8)
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-8),
+                        dst: Operand::Reg(Register::R11)
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Mult,
+                        Operand::Stack(-4),
+                        Operand::Reg(Register::R11),
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R11),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-8),
+                        dst: Operand::Reg(Register::AX),
                     },
                     Instruction::Ret
                 ]

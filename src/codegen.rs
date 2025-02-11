@@ -1,4 +1,4 @@
-use crate::asm::{Function, Instruction, Operand, Program, UnaryOperator};
+use crate::asm::{BinaryOperator, Function, Instruction, Operand, Program, UnaryOperator};
 
 #[derive(Debug)]
 pub struct CodegenError {
@@ -55,6 +55,16 @@ fn generate_instruction(insts: Vec<Instruction>) -> Result<String, CodegenError>
                 )
             }
             Instruction::AllocateStack(n) => format!("\tsubq\t${}, %rsp\n", n),
+            Instruction::Binary(op, o1, o2) => {
+                format!(
+                    "\t{op}\t{o1},{o2}\n",
+                    op = generate_binop(op)?,
+                    o1 = generate_operand(o1)?,
+                    o2 = generate_operand(o2)?,
+                )
+            }
+            Instruction::Idiv(o) => format!("\tidivl\t{o}\n", o = generate_operand(o)?),
+            Instruction::Cdq => format!("\tcdq\n"),
         };
 
         code += &op;
@@ -70,6 +80,14 @@ fn generate_uop(op: UnaryOperator) -> Result<String, CodegenError> {
     }
 }
 
+fn generate_binop(op: BinaryOperator) -> Result<String, CodegenError> {
+    match op {
+        BinaryOperator::Add => Ok("addl".to_string()),
+        BinaryOperator::Sub => Ok("subl".to_string()),
+        BinaryOperator::Mult => Ok("imull".to_string()),
+    }
+}
+
 fn generate_operand(o: Operand) -> Result<String, CodegenError> {
     match o {
         Operand::Immediate(n) => Ok(format!("${}", n)),
@@ -77,6 +95,8 @@ fn generate_operand(o: Operand) -> Result<String, CodegenError> {
             let r = match r {
                 crate::asm::Register::AX => "%eax".to_string(),
                 crate::asm::Register::R10 => "%r10d".to_string(),
+                crate::asm::Register::DX => "%edx".to_string(),
+                crate::asm::Register::R11 => "%r11d".to_string(),
             };
 
             Ok(format!("{}", r))
