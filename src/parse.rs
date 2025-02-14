@@ -143,47 +143,6 @@ fn precedence(token: &Token) -> i32 {
     }
 }
 
-fn parse_expression(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> {
-    let next: &Token = peek(tokens);
-
-    match *next {
-        Token::Constant(n) => {
-            consume(tokens);
-            Ok(ast::Expression::Constant(n))
-        }
-        Token::BitwiseComplementOperator => {
-            consume(tokens);
-            let exp = parse_expression(tokens)?;
-
-            Ok(ast::Expression::Unary(
-                ast::UnaryOperator::Complement,
-                Box::new(exp),
-            ))
-        }
-        Token::NegationOperator => {
-            consume(tokens);
-            let exp = parse_expression(tokens)?;
-
-            Ok(ast::Expression::Unary(
-                ast::UnaryOperator::Negate,
-                Box::new(exp),
-            ))
-        }
-        // Token::DecrementOperator => todo!(),
-        Token::OpenParen => {
-            consume(tokens);
-            let exp = parse_expression(tokens)?;
-            expect(tokens, Token::CloseParen)?;
-            Ok(exp)
-        }
-        _ => {
-            return Err(ParseError {
-                s: format!("Malformed expression {:?}", next),
-            })
-        }
-    }
-}
-
 fn parse_identifier(tokens: &mut Vec<Token>) -> Result<ast::Identifier, ParseError> {
     let t = expect_fn(tokens, |t| matches!(t, Token::Identifier(_)))?;
 
