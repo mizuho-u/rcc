@@ -45,9 +45,21 @@ pub struct Identifier {
 }
 
 #[derive(Debug)]
-pub struct TackeyError {
-    s: String,
+pub struct TackeyError(String);
+
+impl std::fmt::Display for TackeyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
+
+impl From<String> for TackeyError {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl std::error::Error for TackeyError {}
 
 pub fn convert(p: ast::Program) -> Result<Program, TackeyError> {
     convert_program(p)

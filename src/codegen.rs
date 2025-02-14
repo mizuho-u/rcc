@@ -1,9 +1,21 @@
 use crate::asm::{BinaryOperator, Function, Instruction, Operand, Program, UnaryOperator};
 
 #[derive(Debug)]
-pub struct CodegenError {
-    s: String,
+pub struct CodegenError(String);
+
+impl std::fmt::Display for CodegenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
+
+impl From<String> for CodegenError {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl std::error::Error for CodegenError {}
 
 pub fn generate(p: Program) -> Result<String, CodegenError> {
     generate_program(p)

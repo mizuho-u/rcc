@@ -4,17 +4,27 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct ParseError {
-    s: String,
+pub struct ParseError(String);
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
+
+impl From<String> for ParseError {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl std::error::Error for ParseError {}
 
 pub fn parse(tokens: &mut Vec<Token>) -> Result<ast::Program, ParseError> {
     let p = parse_program(tokens)?;
 
     if tokens.len() >= 1 {
-        Err(ParseError {
-            s: format!("some tokens remaining {:?}", tokens),
-        })
+        Err(ParseError(format!("some tokens remaining {:?}", tokens)))
     } else {
         Ok(p)
     }
@@ -81,11 +91,7 @@ fn parse_factor(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> 
             expect(tokens, Token::CloseParen)?;
             Ok(exp)
         }
-        _ => {
-            return Err(ParseError {
-                s: format!("Malformed expression {:?}", next),
-            })
-        }
+        _ => return Err(ParseError(format!("Malformed expression {:?}", next))),
     }
 }
 
@@ -127,9 +133,7 @@ fn parse_binop(
         Token::DivisionOperator => Ok(ast::BinaryOperator::Divide),
         Token::MultiplicationOperator => Ok(ast::BinaryOperator::Multiply),
         Token::RemainderOperator => Ok(ast::BinaryOperator::Remainder),
-        _ => Err(ParseError {
-            s: format!("not binop"),
-        }),
+        _ => Err(ParseError(format!("not binop"))),
     }?;
 
     Ok(Expression::Binary(op, Box::new(left), Box::new(right)))
@@ -150,17 +154,16 @@ fn parse_identifier(tokens: &mut Vec<Token>) -> Result<ast::Identifier, ParseErr
         return Ok(ast::Identifier { s: s });
     }
 
-    Err(ParseError {
-        s: format!("Invalid Identifier {:?}", t),
-    })
+    Err(ParseError(format!("Invalid Identifier {:?}", t)))
 }
 fn expect(tokens: &mut Vec<Token>, expected: token::Token) -> Result<Token, ParseError> {
     let head = consume(tokens);
 
     if expected != head {
-        return Err(ParseError {
-            s: format!("expected {:?} got {:?}", expected, head),
-        });
+        return Err(ParseError(format!(
+            "expected {:?} got {:?}",
+            expected, head
+        )));
     }
 
     Ok(head)
@@ -170,9 +173,7 @@ fn expect_fn(tokens: &mut Vec<Token>, cb: fn(&Token) -> bool) -> Result<Token, P
     let head = consume(tokens);
 
     if !cb(&head) {
-        return Err(ParseError {
-            s: format!("unexpected token {:?}", head),
-        });
+        return Err(ParseError(format!("unexpected token {:?}", head)));
     }
 
     Ok(head)

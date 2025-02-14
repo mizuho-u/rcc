@@ -62,9 +62,21 @@ pub struct Identifier {
 }
 
 #[derive(Debug)]
-pub struct AssemblyError {
-    s: String,
+pub struct AssemblyError(String);
+
+impl std::fmt::Display for AssemblyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
+
+impl From<String> for AssemblyError {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl std::error::Error for AssemblyError {}
 
 pub fn convert(p: tacky::Program) -> Result<Program, AssemblyError> {
     let mut p = convert_program(p)?;
@@ -169,9 +181,7 @@ fn convert_binop(op: tacky::BinaryOperator) -> Result<BinaryOperator, AssemblyEr
         tacky::BinaryOperator::Add => Ok(BinaryOperator::Add),
         tacky::BinaryOperator::Subtract => Ok(BinaryOperator::Sub),
         tacky::BinaryOperator::Multiply => Ok(BinaryOperator::Mult),
-        _ => Err(AssemblyError {
-            s: format!("cannot convert binary op"),
-        }),
+        _ => Err(AssemblyError(format!("cannot convert binary op"))),
     }
 }
 
