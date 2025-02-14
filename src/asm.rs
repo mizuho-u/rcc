@@ -38,6 +38,11 @@ pub enum BinaryOperator {
     Add,
     Sub,
     Mult,
+    And,
+    Or,
+    Xor,
+    Shl,
+    Shr,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -51,6 +56,7 @@ pub enum Operand {
 #[derive(PartialEq, Debug, Clone)]
 pub enum Register {
     AX,
+    CX,
     DX,
     R10,
     R11,
@@ -135,7 +141,12 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                 match op {
                     tacky::BinaryOperator::Add
                     | tacky::BinaryOperator::Subtract
-                    | tacky::BinaryOperator::Multiply => {
+                    | tacky::BinaryOperator::Multiply
+                    | tacky::BinaryOperator::And
+                    | tacky::BinaryOperator::Or
+                    | tacky::BinaryOperator::Xor
+                    | tacky::BinaryOperator::LeftShift
+                    | tacky::BinaryOperator::RightShift => {
                         insts.push(Instruction::Mov {
                             src: left,
                             dst: dst.clone(),
@@ -181,6 +192,11 @@ fn convert_binop(op: tacky::BinaryOperator) -> Result<BinaryOperator, AssemblyEr
         tacky::BinaryOperator::Add => Ok(BinaryOperator::Add),
         tacky::BinaryOperator::Subtract => Ok(BinaryOperator::Sub),
         tacky::BinaryOperator::Multiply => Ok(BinaryOperator::Mult),
+        tacky::BinaryOperator::And => Ok(BinaryOperator::And),
+        tacky::BinaryOperator::Or => Ok(BinaryOperator::Or),
+        tacky::BinaryOperator::Xor => Ok(BinaryOperator::Xor),
+        tacky::BinaryOperator::LeftShift => Ok(BinaryOperator::Shl),
+        tacky::BinaryOperator::RightShift => Ok(BinaryOperator::Shr),
         _ => Err(AssemblyError(format!("cannot convert binary op"))),
     }
 }
@@ -327,7 +343,11 @@ fn rewrite_stack_operand(
             }
             //　addとsubのオペランドの両方にスタックをとることはできない
             Instruction::Binary(op, Operand::Stack(s1), Operand::Stack(s2))
-                if (*op == BinaryOperator::Add) || (*op == BinaryOperator::Sub) =>
+                if (*op == BinaryOperator::Add)
+                    || (*op == BinaryOperator::Sub)
+                    || (*op == BinaryOperator::And)
+                    || (*op == BinaryOperator::Or)
+                    || (*op == BinaryOperator::Xor) =>
             {
                 rewrited.push(Instruction::Mov {
                     src: Operand::Stack(*s1),
@@ -337,6 +357,26 @@ fn rewrite_stack_operand(
                     op.clone(),
                     Operand::Reg(Register::R10),
                     Operand::Stack(*s2),
+                ));
+            }
+            //　shiftのカウンタは即値かCLレジスタ
+            Instruction::Binary(op, Operand::Stack(s), dst)
+                if (*op == BinaryOperator::Shl) || (*op == BinaryOperator::Shr) =>
+            {
+                rewrited.push(Instruction::Mov {
+                    src: Operand::Stack(*s),
+                    dst: Operand::Reg(Register::CX),
+                });
+                // 5bitマスクするらしい
+                rewrited.push(Instruction::Binary(
+                    BinaryOperator::And,
+                    Operand::Immediate(0x1f),
+                    Operand::Reg(Register::CX),
+                ));
+                rewrited.push(Instruction::Binary(
+                    op.clone(),
+                    Operand::Reg(Register::CX),
+                    dst.clone(),
                 ));
             }
             // mulのオペランドのdestinationにメモリは指定できない
@@ -602,6 +642,94 @@ mod tests {
                     Instruction::Ret
                 ]
             })
+        );
+    }
+
+    #[test]
+    fn binop5() {
+        let mut result =
+            token::tokenize(" int main(void) { return 1 | 2 ^ 3 & 4 << 5 >> 6; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = tconvert(result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            Program::Program(Function::Function {
+                identifier: Identifier {
+                    s: "main".to_string()
+                },
+                instructions: vec![
+                    Instruction::AllocateStack(20),
+                    Instruction::Mov {
+                        src: Operand::Immediate(4),
+                        dst: Operand::Stack(-4)
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Shl,
+                        Operand::Immediate(5),
+                        Operand::Stack(-4)
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::R10)
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R10),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Shr,
+                        Operand::Immediate(6),
+                        Operand::Stack(-8),
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Immediate(3),
+                        dst: Operand::Stack(-12),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-8),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::And,
+                        Operand::Reg(Register::R10),
+                        Operand::Stack(-12),
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Immediate(2),
+                        dst: Operand::Stack(-16),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-12),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Xor,
+                        Operand::Reg(Register::R10),
+                        Operand::Stack(-16),
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Stack(-20),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-16),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Or,
+                        Operand::Reg(Register::R10),
+                        Operand::Stack(-20),
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Stack(-20),
+                        dst: Operand::Reg(Register::AX),
+                    },
+                    Instruction::Ret
+                ]
+            }),
+            "{result:#?}"
         );
     }
 }

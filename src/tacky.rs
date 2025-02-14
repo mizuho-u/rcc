@@ -37,6 +37,11 @@ pub enum BinaryOperator {
     Multiply,
     Devide,
     Remainder,
+    And,
+    Or,
+    Xor,
+    LeftShift,
+    RightShift,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -128,6 +133,11 @@ fn convert_exp(
                 ast::BinaryOperator::Multiply => BinaryOperator::Multiply,
                 ast::BinaryOperator::Divide => BinaryOperator::Devide,
                 ast::BinaryOperator::Remainder => BinaryOperator::Remainder,
+                ast::BinaryOperator::And => BinaryOperator::And,
+                ast::BinaryOperator::Or => BinaryOperator::Or,
+                ast::BinaryOperator::Xor => BinaryOperator::Xor,
+                ast::BinaryOperator::LeftShit => BinaryOperator::LeftShift,
+                ast::BinaryOperator::RightShift => BinaryOperator::RightShift,
             };
 
             instructions.push(Instruction::Binary(op, left, right, dst.clone()));
@@ -267,6 +277,76 @@ mod tests {
                     ),
                     tacky::Instruction::Return(tacky::Val::Var(Identifier {
                         s: "tmp.3".to_string()
+                    })),
+                ]
+            ))
+        )
+    }
+
+    #[test]
+    fn bitwise_binary_operator() {
+        let mut result =
+            token::tokenize(" int main(void) { return 1 | 2 ^ 3 & 4 << 5 >> 6; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            tacky::Program::Program(tacky::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                vec![
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::LeftShift,
+                        tacky::Val::Constant(4),
+                        tacky::Val::Constant(5),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.0".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::RightShift,
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.0".to_string()
+                        }),
+                        tacky::Val::Constant(6),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.1".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::And,
+                        tacky::Val::Constant(3),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.1".to_string()
+                        }),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.2".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::Xor,
+                        tacky::Val::Constant(2),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.2".to_string()
+                        }),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.3".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Binary(
+                        tacky::BinaryOperator::Or,
+                        tacky::Val::Constant(1),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.3".to_string()
+                        }),
+                        tacky::Val::Var(Identifier {
+                            s: "tmp.4".to_string()
+                        }),
+                    ),
+                    tacky::Instruction::Return(tacky::Val::Var(Identifier {
+                        s: "tmp.4".to_string()
                     })),
                 ]
             ))

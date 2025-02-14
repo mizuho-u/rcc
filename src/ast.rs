@@ -33,6 +33,11 @@ pub enum BinaryOperator {
     Multiply,
     Divide,
     Remainder,
+    And,
+    Or,
+    Xor,
+    LeftShit,
+    RightShift,
 }
 
 #[derive(PartialEq, Debug)]

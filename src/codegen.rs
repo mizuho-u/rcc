@@ -97,6 +97,11 @@ fn generate_binop(op: BinaryOperator) -> Result<String, CodegenError> {
         BinaryOperator::Add => Ok("addl".to_string()),
         BinaryOperator::Sub => Ok("subl".to_string()),
         BinaryOperator::Mult => Ok("imull".to_string()),
+        BinaryOperator::And => Ok("andl".to_string()),
+        BinaryOperator::Or => Ok("orl".to_string()),
+        BinaryOperator::Xor => Ok("xorl".to_string()),
+        BinaryOperator::Shl => Ok("sall".to_string()),
+        BinaryOperator::Shr => Ok("sarl".to_string()),
     }
 }
 
@@ -106,8 +111,9 @@ fn generate_operand(o: Operand) -> Result<String, CodegenError> {
         Operand::Reg(r) => {
             let r = match r {
                 crate::asm::Register::AX => "%eax".to_string(),
-                crate::asm::Register::R10 => "%r10d".to_string(),
                 crate::asm::Register::DX => "%edx".to_string(),
+                crate::asm::Register::CX => "%ecx".to_string(),
+                crate::asm::Register::R10 => "%r10d".to_string(),
                 crate::asm::Register::R11 => "%r11d".to_string(),
             };
 

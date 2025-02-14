@@ -110,7 +110,12 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<ast::Expres
             | Token::AdditionOperator
             | Token::DivisionOperator
             | Token::MultiplicationOperator
-            | Token::RemainderOperator => {
+            | Token::RemainderOperator
+            | Token::AndOperator
+            | Token::OrOperator
+            | Token::XorOperator
+            | Token::LeftShiftOperator
+            | Token::RightShiftOperator => {
                 let op = consume(tokens);
                 let right = parse_exp(tokens, precedence(&op) + 1)?;
                 left = parse_binop(op, left, right)?;
@@ -133,6 +138,11 @@ fn parse_binop(
         Token::DivisionOperator => Ok(ast::BinaryOperator::Divide),
         Token::MultiplicationOperator => Ok(ast::BinaryOperator::Multiply),
         Token::RemainderOperator => Ok(ast::BinaryOperator::Remainder),
+        Token::AndOperator => Ok(ast::BinaryOperator::And),
+        Token::OrOperator => Ok(ast::BinaryOperator::Or),
+        Token::XorOperator => Ok(ast::BinaryOperator::Xor),
+        Token::LeftShiftOperator => Ok(ast::BinaryOperator::LeftShit),
+        Token::RightShiftOperator => Ok(ast::BinaryOperator::RightShift),
         _ => Err(ParseError(format!("not binop"))),
     }?;
 
@@ -143,6 +153,10 @@ fn precedence(token: &Token) -> i32 {
     match token {
         Token::MultiplicationOperator | Token::DivisionOperator | Token::RemainderOperator => 50,
         Token::AdditionOperator | Token::NegationOperator => 45,
+        Token::LeftShiftOperator | Token::RightShiftOperator => 40,
+        Token::AndOperator => 39,
+        Token::XorOperator => 38,
+        Token::OrOperator => 37,
         _ => 0,
     }
 }
@@ -189,6 +203,8 @@ fn consume(tokens: &mut Vec<Token>) -> Token {
 
 #[cfg(test)]
 mod tests {
+    use crate::ast::BinaryOperator;
+    use crate::ast::Expression;
     use crate::ast::Identifier;
     use crate::parse::parse;
     use crate::{ast, token};
@@ -364,6 +380,93 @@ mod tests {
                         ast::UnaryOperator::Complement,
                         Box::new(ast::Expression::Constant(3))
                     )),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_bitwise_binary_operator1() {
+        let mut result = token::tokenize(" int main(void) { return 3 & 1; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(ast::Expression::Binary(
+                    ast::BinaryOperator::And,
+                    Box::new(ast::Expression::Constant(3)),
+                    Box::new(ast::Expression::Constant(1)),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_bitwise_binary_operator2() {
+        let mut result =
+            token::tokenize(" int main(void) { return 1 | 2 ^ 3 & 4 << 5 >> 6; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(Expression::Binary(
+                    BinaryOperator::Or,
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Xor,
+                        Box::new(Expression::Constant(2)),
+                        Box::new(Expression::Binary(
+                            BinaryOperator::And,
+                            Box::new(Expression::Constant(3)),
+                            Box::new(Expression::Binary(
+                                BinaryOperator::RightShift,
+                                Box::new(Expression::Binary(
+                                    BinaryOperator::LeftShit,
+                                    Box::new(Expression::Constant(4)),
+                                    Box::new(Expression::Constant(5)),
+                                )),
+                                Box::new(Expression::Constant(6)),
+                            ))
+                        )),
+                    )),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn valid_parse_bitwise_binary_operator3() {
+        let mut result =
+            token::tokenize(" int main(void) { return 1 << 2 - 3 * 4 ^ 5; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(Expression::Binary(
+                    BinaryOperator::Xor,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::LeftShit,
+                        Box::new(Expression::Constant(1)),
+                        Box::new(Expression::Binary(
+                            BinaryOperator::Subtract,
+                            Box::new(Expression::Constant(2)),
+                            Box::new(Expression::Binary(
+                                BinaryOperator::Multiply,
+                                Box::new(Expression::Constant(3)),
+                                Box::new(Expression::Constant(4)),
+                            )),
+                        )),
+                    )),
+                    Box::new(Expression::Constant(5)),
                 ))
             ))
         )

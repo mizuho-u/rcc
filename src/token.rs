@@ -19,6 +19,11 @@ pub enum Token {
     MultiplicationOperator,
     DivisionOperator,
     RemainderOperator,
+    AndOperator,
+    OrOperator,
+    XorOperator,
+    LeftShiftOperator,
+    RightShiftOperator,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -37,14 +42,19 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
 
     let s = s.trim();
 
-    if let Some(t) = find_token(s, r"^(--|~|-|\+|\*|/|%)", |c| match c {
+    if let Some(t) = find_token(s, r"^(--|<<|>>|~|-|\+|\*|/|%|&|\||\^)", |c| match c {
         "--" => Some(Token::DecrementOperator),
+        "<<" => Some(Token::LeftShiftOperator),
+        ">>" => Some(Token::RightShiftOperator),
         "~" => Some(Token::BitwiseComplementOperator),
         "-" => Some(Token::NegationOperator),
         "+" => Some(Token::AdditionOperator),
         "*" => Some(Token::MultiplicationOperator),
         "/" => Some(Token::DivisionOperator),
         "%" => Some(Token::RemainderOperator),
+        "&" => Some(Token::AndOperator),
+        "|" => Some(Token::OrOperator),
+        "^" => Some(Token::XorOperator),
         _ => None,
     }) {
         ts.push(t.0);
@@ -167,6 +177,39 @@ mod tests {
                 Token::CloseParen,
                 Token::CloseParen,
                 Token::CloseParen,
+                Token::Semicolon,
+                Token::CloseBrace,
+            ]
+        )
+    }
+
+    #[test]
+    fn bitwise_operator() {
+        let result =
+            token::tokenize(" int main(void) { return 1<<(2|3)>>4&5^6; } ".into()).unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::Int,
+                Token::Identifier("main".to_string()),
+                Token::OpenParen,
+                Token::Void,
+                Token::CloseParen,
+                Token::OpenBrace,
+                Token::Return,
+                Token::Constant(1),
+                Token::LeftShiftOperator,
+                Token::OpenParen,
+                Token::Constant(2),
+                Token::OrOperator,
+                Token::Constant(3),
+                Token::CloseParen,
+                Token::RightShiftOperator,
+                Token::Constant(4),
+                Token::AndOperator,
+                Token::Constant(5),
+                Token::XorOperator,
+                Token::Constant(6),
                 Token::Semicolon,
                 Token::CloseBrace,
             ]
