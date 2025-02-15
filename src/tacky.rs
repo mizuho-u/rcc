@@ -113,6 +113,7 @@ fn convert_exp(
             let op = match op {
                 ast::UnaryOperator::Complement => UnaryOperator::Complement,
                 ast::UnaryOperator::Negate => UnaryOperator::Negate,
+                ast::UnaryOperator::Not => todo!(),
             };
 
             instructions.push(Instruction::Unary(op, src, dst.clone()));
@@ -138,6 +139,14 @@ fn convert_exp(
                 ast::BinaryOperator::Xor => BinaryOperator::Xor,
                 ast::BinaryOperator::LeftShit => BinaryOperator::LeftShift,
                 ast::BinaryOperator::RightShift => BinaryOperator::RightShift,
+                ast::BinaryOperator::LogicalAnd => todo!(),
+                ast::BinaryOperator::LogicalOr => todo!(),
+                ast::BinaryOperator::EqualTo => todo!(),
+                ast::BinaryOperator::NotEqualTo => todo!(),
+                ast::BinaryOperator::LessThan => todo!(),
+                ast::BinaryOperator::LessOrEqual => todo!(),
+                ast::BinaryOperator::GreaterThan => todo!(),
+                ast::BinaryOperator::GreaterOrEqual => todo!(),
             };
 
             instructions.push(Instruction::Binary(op, left, right, dst.clone()));

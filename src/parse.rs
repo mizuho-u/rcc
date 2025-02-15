@@ -84,6 +84,15 @@ fn parse_factor(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> 
                 Box::new(exp),
             ))
         }
+        Token::LogicalNotOperator => {
+            consume(tokens);
+            let exp = parse_factor(tokens)?;
+
+            Ok(ast::Expression::Unary(
+                ast::UnaryOperator::Not,
+                Box::new(exp),
+            ))
+        }
         // Token::DecrementOperator => todo!(),
         Token::OpenParen => {
             consume(tokens);
@@ -101,7 +110,7 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<ast::Expres
     loop {
         let next = peek(tokens);
 
-        if precedence(next) < min_prededence {
+        if binop_precedence(next) < min_prededence {
             break;
         }
 
@@ -115,9 +124,17 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<ast::Expres
             | Token::OrOperator
             | Token::XorOperator
             | Token::LeftShiftOperator
-            | Token::RightShiftOperator => {
+            | Token::RightShiftOperator
+            | Token::LogicalAndOperator
+            | Token::LogicalOrOperator
+            | Token::EqualToOperator
+            | Token::NotEqualToOperator
+            | Token::LessThanOperator
+            | Token::LessOrEqualOperator
+            | Token::GreaterThanOperator
+            | Token::GreaterOrEqualOperator => {
                 let op = consume(tokens);
-                let right = parse_exp(tokens, precedence(&op) + 1)?;
+                let right = parse_exp(tokens, binop_precedence(&op) + 1)?;
                 left = parse_binop(op, left, right)?;
             }
             _ => break,
@@ -143,20 +160,35 @@ fn parse_binop(
         Token::XorOperator => Ok(ast::BinaryOperator::Xor),
         Token::LeftShiftOperator => Ok(ast::BinaryOperator::LeftShit),
         Token::RightShiftOperator => Ok(ast::BinaryOperator::RightShift),
+        Token::LogicalAndOperator => Ok(ast::BinaryOperator::LogicalAnd),
+        Token::LogicalOrOperator => Ok(ast::BinaryOperator::LogicalOr),
+        Token::EqualToOperator => Ok(ast::BinaryOperator::EqualTo),
+        Token::NotEqualToOperator => Ok(ast::BinaryOperator::NotEqualTo),
+        Token::LessThanOperator => Ok(ast::BinaryOperator::LessThan),
+        Token::LessOrEqualOperator => Ok(ast::BinaryOperator::LessOrEqual),
+        Token::GreaterThanOperator => Ok(ast::BinaryOperator::GreaterThan),
+        Token::GreaterOrEqualOperator => Ok(ast::BinaryOperator::GreaterOrEqual),
         _ => Err(ParseError(format!("not binop"))),
     }?;
 
     Ok(Expression::Binary(op, Box::new(left), Box::new(right)))
 }
 
-fn precedence(token: &Token) -> i32 {
+fn binop_precedence(token: &Token) -> i32 {
     match token {
-        Token::MultiplicationOperator | Token::DivisionOperator | Token::RemainderOperator => 50,
-        Token::AdditionOperator | Token::NegationOperator => 45,
-        Token::LeftShiftOperator | Token::RightShiftOperator => 40,
-        Token::AndOperator => 39,
-        Token::XorOperator => 38,
-        Token::OrOperator => 37,
+        Token::MultiplicationOperator | Token::DivisionOperator | Token::RemainderOperator => 100,
+        Token::AdditionOperator | Token::NegationOperator => 90,
+        Token::LeftShiftOperator | Token::RightShiftOperator => 80,
+        Token::LessThanOperator
+        | Token::LessOrEqualOperator
+        | Token::GreaterThanOperator
+        | Token::GreaterOrEqualOperator => 70,
+        Token::EqualToOperator | Token::NotEqualToOperator => 60,
+        Token::AndOperator => 50,
+        Token::XorOperator => 40,
+        Token::OrOperator => 30,
+        Token::LogicalAndOperator => 29,
+        Token::LogicalOrOperator => 28,
         _ => 0,
     }
 }
@@ -206,6 +238,7 @@ mod tests {
     use crate::ast::BinaryOperator;
     use crate::ast::Expression;
     use crate::ast::Identifier;
+    use crate::ast::UnaryOperator;
     use crate::parse::parse;
     use crate::{ast, token};
 
@@ -467,6 +500,75 @@ mod tests {
                         )),
                     )),
                     Box::new(Expression::Constant(5)),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn logical_operator() {
+        let mut result =
+            token::tokenize(" int main(void) { return !1 && 2 || 3; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(Expression::Binary(
+                    BinaryOperator::LogicalOr,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::LogicalAnd,
+                        Box::new(Expression::Unary(
+                            UnaryOperator::Not,
+                            Box::new(Expression::Constant(1))
+                        )),
+                        Box::new(Expression::Constant(2)),
+                    )),
+                    Box::new(Expression::Constant(3)),
+                ))
+            ))
+        )
+    }
+
+    #[test]
+    fn relational_operator() {
+        //  (1 == 2) != ((((3 < 4) > 5) <= 6) >= 7)
+        let mut result =
+            token::tokenize(" int main(void) { return 1 == 2 != 3 < 4 > 5 <= 6 >= 7; } ".into())
+                .unwrap();
+        let result = parse(&mut result).unwrap();
+        assert_eq!(
+            result,
+            ast::Program::Program(ast::Function::Function(
+                Identifier {
+                    s: "main".to_string()
+                },
+                ast::Statement::Return(Expression::Binary(
+                    BinaryOperator::NotEqualTo,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::EqualTo,
+                        Box::new(Expression::Constant(1)),
+                        Box::new(Expression::Constant(2)),
+                    )),
+                    Box::new(Expression::Binary(
+                        BinaryOperator::GreaterOrEqual,
+                        Box::new(Expression::Binary(
+                            BinaryOperator::LessOrEqual,
+                            Box::new(Expression::Binary(
+                                BinaryOperator::GreaterThan,
+                                Box::new(Expression::Binary(
+                                    BinaryOperator::LessThan,
+                                    Box::new(Expression::Constant(3)),
+                                    Box::new(Expression::Constant(4)),
+                                )),
+                                Box::new(Expression::Constant(5)),
+                            )),
+                            Box::new(Expression::Constant(6)),
+                        )),
+                        Box::new(Expression::Constant(7)),
+                    )),
                 ))
             ))
         )

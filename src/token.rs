@@ -31,8 +31,8 @@ pub enum Token {
     NotEqualToOperator,
     LessThanOperator,
     GreaterThanOperator,
-    LessThanOrEqualOperator,
-    GreaterThanOrEqualOperator,
+    LessOrEqualOperator,
+    GreaterOrEqualOperator,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -59,8 +59,8 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
         "||" => Some(Token::LogicalOrOperator),
         "==" => Some(Token::EqualToOperator),
         "!=" => Some(Token::NotEqualToOperator),
-        "<=" => Some(Token::LessThanOrEqualOperator),
-        ">=" => Some(Token::GreaterThanOrEqualOperator),
+        "<=" => Some(Token::LessOrEqualOperator),
+        ">=" => Some(Token::GreaterOrEqualOperator),
         _ => None,
     }) {
         ts.push(t.0);
@@ -290,9 +290,9 @@ mod tests {
                 Token::Constant(4),
                 Token::GreaterThanOperator,
                 Token::Constant(5),
-                Token::LessThanOrEqualOperator,
+                Token::LessOrEqualOperator,
                 Token::Constant(6),
-                Token::GreaterThanOrEqualOperator,
+                Token::GreaterOrEqualOperator,
                 Token::Constant(7),
                 Token::Semicolon,
                 Token::CloseBrace,

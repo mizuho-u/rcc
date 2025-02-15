@@ -24,6 +24,7 @@ pub enum Expression {
 pub enum UnaryOperator {
     Complement,
     Negate,
+    Not,
 }
 
 #[derive(PartialEq, Debug)]
@@ -38,6 +39,14 @@ pub enum BinaryOperator {
     Xor,
     LeftShit,
     RightShift,
+    LogicalAnd,
+    LogicalOr,
+    EqualTo,
+    NotEqualTo,
+    LessThan,
+    LessOrEqual,
+    GreaterThan,
+    GreaterOrEqual,
 }
 
 #[derive(PartialEq, Debug)]
