@@ -24,6 +24,15 @@ pub enum Token {
     XorOperator,
     LeftShiftOperator,
     RightShiftOperator,
+    LogicalNotOperator,
+    LogicalAndOperator,
+    LogicalOrOperator,
+    EqualToOperator,
+    NotEqualToOperator,
+    LessThanOperator,
+    GreaterThanOperator,
+    LessThanOrEqualOperator,
+    GreaterThanOrEqualOperator,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -42,10 +51,23 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
 
     let s = s.trim();
 
-    if let Some(t) = find_token(s, r"^(--|<<|>>|~|-|\+|\*|/|%|&|\||\^)", |c| match c {
+    if let Some(t) = find_token(s, r"^(--|<<|>>|&&|\|\||==|!=|<=|>=)", |c| match c {
         "--" => Some(Token::DecrementOperator),
         "<<" => Some(Token::LeftShiftOperator),
         ">>" => Some(Token::RightShiftOperator),
+        "&&" => Some(Token::LogicalAndOperator),
+        "||" => Some(Token::LogicalOrOperator),
+        "==" => Some(Token::EqualToOperator),
+        "!=" => Some(Token::NotEqualToOperator),
+        "<=" => Some(Token::LessThanOrEqualOperator),
+        ">=" => Some(Token::GreaterThanOrEqualOperator),
+        _ => None,
+    }) {
+        ts.push(t.0);
+        return _tokenize(&s[t.1..], ts);
+    }
+
+    if let Some(t) = find_token(s, r"^(~|-|\+|\*|/|%|&|\||\^|!|<|>)", |c| match c {
         "~" => Some(Token::BitwiseComplementOperator),
         "-" => Some(Token::NegationOperator),
         "+" => Some(Token::AdditionOperator),
@@ -55,6 +77,9 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
         "&" => Some(Token::AndOperator),
         "|" => Some(Token::OrOperator),
         "^" => Some(Token::XorOperator),
+        "!" => Some(Token::LogicalNotOperator),
+        "<" => Some(Token::LessThanOperator),
+        ">" => Some(Token::GreaterThanOperator),
         _ => None,
     }) {
         ts.push(t.0);
@@ -210,6 +235,65 @@ mod tests {
                 Token::Constant(5),
                 Token::XorOperator,
                 Token::Constant(6),
+                Token::Semicolon,
+                Token::CloseBrace,
+            ]
+        )
+    }
+
+    #[test]
+    fn logical_operator() {
+        let result = token::tokenize(" int main(void) { return !1 && 2 || 3; } ".into()).unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::Int,
+                Token::Identifier("main".to_string()),
+                Token::OpenParen,
+                Token::Void,
+                Token::CloseParen,
+                Token::OpenBrace,
+                Token::Return,
+                Token::LogicalNotOperator,
+                Token::Constant(1),
+                Token::LogicalAndOperator,
+                Token::Constant(2),
+                Token::LogicalOrOperator,
+                Token::Constant(3),
+                Token::Semicolon,
+                Token::CloseBrace,
+            ]
+        )
+    }
+
+    #[test]
+    fn relational_operator() {
+        let result =
+            token::tokenize(" int main(void) { return 1 == 2 != 3 < 4 > 5 <= 6 >= 7; } ".into())
+                .unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::Int,
+                Token::Identifier("main".to_string()),
+                Token::OpenParen,
+                Token::Void,
+                Token::CloseParen,
+                Token::OpenBrace,
+                Token::Return,
+                Token::Constant(1),
+                Token::EqualToOperator,
+                Token::Constant(2),
+                Token::NotEqualToOperator,
+                Token::Constant(3),
+                Token::LessThanOperator,
+                Token::Constant(4),
+                Token::GreaterThanOperator,
+                Token::Constant(5),
+                Token::LessThanOrEqualOperator,
+                Token::Constant(6),
+                Token::GreaterThanOrEqualOperator,
+                Token::Constant(7),
                 Token::Semicolon,
                 Token::CloseBrace,
             ]
