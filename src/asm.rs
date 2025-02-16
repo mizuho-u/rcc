@@ -63,9 +63,7 @@ pub enum Register {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct Identifier {
-    pub s: String,
-}
+pub struct Identifier(pub String);
 
 #[derive(Debug)]
 pub struct AssemblyError(String);
@@ -101,7 +99,7 @@ fn convert_function(f: tacky::Function) -> Result<Function, AssemblyError> {
     let tacky::Function::Function(id, body) = f;
 
     Ok(Function::Function {
-        identifier: Identifier { s: id.s },
+        identifier: Identifier(id.0),
         instructions: convert_statement(body)?,
     })
 }
@@ -216,7 +214,7 @@ fn convert_binop(op: tacky::BinaryOperator) -> Result<BinaryOperator, AssemblyEr
 fn convert_exp(e: tacky::Val) -> Result<Operand, AssemblyError> {
     let op = match e {
         tacky::Val::Constant(n) => Operand::Immediate(n),
-        tacky::Val::Var(id) => Operand::Pseudo(Identifier { s: id.s }),
+        tacky::Val::Var(id) => Operand::Pseudo(Identifier(id.0)),
     };
 
     Ok(op)
@@ -255,7 +253,7 @@ fn replace_pseudo(p: &mut Program) -> Result<(), AssemblyError> {
 fn replace_operand(o: &mut Operand) -> Result<(), AssemblyError> {
     match o {
         Operand::Pseudo(id) => {
-            *o = Operand::Stack(allocate_stack(&id.s));
+            *o = Operand::Stack(allocate_stack(&id.0));
         }
         _ => {}
     }
@@ -436,9 +434,7 @@ mod tests {
         assert_eq!(
             result,
             Program::Program(Function::Function {
-                identifier: Identifier {
-                    s: "main".to_string()
-                },
+                identifier: Identifier("main".to_string()),
                 instructions: vec![
                     Instruction::AllocateStack(0),
                     Instruction::Mov {
@@ -461,9 +457,7 @@ mod tests {
         assert_eq!(
             result,
             Program::Program(Function::Function {
-                identifier: Identifier {
-                    s: "main".to_string()
-                },
+                identifier: Identifier("main".to_string()),
                 instructions: vec![
                     Instruction::AllocateStack(8),
                     Instruction::Mov {
@@ -500,9 +494,7 @@ mod tests {
         assert_eq!(
             result,
             Program::Program(Function::Function {
-                identifier: Identifier {
-                    s: "main".to_string()
-                },
+                identifier: Identifier("main".to_string()),
                 instructions: vec![
                     Instruction::AllocateStack(4),
                     Instruction::Mov {
@@ -534,9 +526,7 @@ mod tests {
         assert_eq!(
             result,
             Program::Program(Function::Function {
-                identifier: Identifier {
-                    s: "main".to_string()
-                },
+                identifier: Identifier("main".to_string()),
                 instructions: vec![
                     Instruction::AllocateStack(4),
                     Instruction::Mov {
@@ -576,9 +566,7 @@ mod tests {
         assert_eq!(
             result,
             Program::Program(Function::Function {
-                identifier: Identifier {
-                    s: "main".to_string()
-                },
+                identifier: Identifier("main".to_string()),
                 instructions: vec![
                     Instruction::AllocateStack(4),
                     Instruction::Mov {
@@ -616,9 +604,7 @@ mod tests {
         assert_eq!(
             result,
             Program::Program(Function::Function {
-                identifier: Identifier {
-                    s: "main".to_string()
-                },
+                identifier: Identifier("main".to_string()),
                 instructions: vec![
                     Instruction::AllocateStack(8),
                     Instruction::Mov {
@@ -668,9 +654,7 @@ mod tests {
         assert_eq!(
             result,
             Program::Program(Function::Function {
-                identifier: Identifier {
-                    s: "main".to_string()
-                },
+                identifier: Identifier("main".to_string()),
                 instructions: vec![
                     Instruction::AllocateStack(20),
                     Instruction::Mov {

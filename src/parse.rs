@@ -197,7 +197,7 @@ fn parse_identifier(tokens: &mut Vec<Token>) -> Result<ast::Identifier, ParseErr
     let t = expect_fn(tokens, |t| matches!(t, Token::Identifier(_)))?;
 
     if let Token::Identifier(s) = t {
-        return Ok(ast::Identifier { s: s });
+        return Ok(ast::Identifier(s));
     }
 
     Err(ParseError(format!("Invalid Identifier {:?}", t)))
@@ -249,9 +249,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Constant(1))
             ))
         )
@@ -264,9 +262,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Unary(
                     ast::UnaryOperator::Complement,
                     Box::new(ast::Expression::Unary(
@@ -285,9 +281,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Binary(
                     ast::BinaryOperator::Add,
                     Box::new(ast::Expression::Constant(1)),
@@ -304,9 +298,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Binary(
                     ast::BinaryOperator::Add,
                     Box::new(ast::Expression::Binary(
@@ -327,9 +319,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Binary(
                     ast::BinaryOperator::Add,
                     Box::new(ast::Expression::Constant(1)),
@@ -350,9 +340,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Binary(
                     ast::BinaryOperator::Add,
                     Box::new(ast::Expression::Constant(1)),
@@ -373,9 +361,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Binary(
                     ast::BinaryOperator::Multiply,
                     Box::new(ast::Expression::Binary(
@@ -396,9 +382,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Binary(
                     ast::BinaryOperator::Multiply,
                     Box::new(ast::Expression::Binary(
@@ -425,9 +409,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(ast::Expression::Binary(
                     ast::BinaryOperator::And,
                     Box::new(ast::Expression::Constant(3)),
@@ -445,9 +427,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(Expression::Binary(
                     BinaryOperator::Or,
                     Box::new(Expression::Constant(1)),
@@ -481,9 +461,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(Expression::Binary(
                     BinaryOperator::Xor,
                     Box::new(Expression::Binary(
@@ -513,9 +491,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(Expression::Binary(
                     BinaryOperator::LogicalOr,
                     Box::new(Expression::Binary(
@@ -542,9 +518,7 @@ mod tests {
         assert_eq!(
             result,
             ast::Program::Program(ast::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 ast::Statement::Return(Expression::Binary(
                     BinaryOperator::NotEqualTo,
                     Box::new(Expression::Binary(

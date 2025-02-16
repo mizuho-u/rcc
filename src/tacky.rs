@@ -57,9 +57,7 @@ pub enum BinaryOperator {
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct Identifier {
-    pub s: String,
-}
+pub struct Identifier(pub String);
 
 #[derive(Debug)]
 pub struct TackeyError(String);
@@ -92,7 +90,7 @@ fn convert_function(f: ast::Function) -> Result<Function, TackeyError> {
     let ast::Function::Function(id, stmt) = f;
 
     Ok(Function::Function(
-        Identifier { s: id.s },
+        Identifier(id.0),
         convert_statement(stmt)?,
     ))
 }
@@ -118,9 +116,7 @@ fn convert_exp(
         ast::Expression::Constant(n) => Ok(Val::Constant(n)),
         ast::Expression::Unary(op, e) => {
             let src = convert_exp(*e, instructions)?;
-            let dst = Val::Var(Identifier {
-                s: make_temporary(),
-            });
+            let dst = Val::Var(Identifier(make_temporary()));
 
             let op = match op {
                 ast::UnaryOperator::Complement => UnaryOperator::Complement,
@@ -134,17 +130,10 @@ fn convert_exp(
         }
         ast::Expression::Binary(op, left, right) => match op {
             ast::BinaryOperator::LogicalAnd => {
-                let false_label = Identifier {
-                    s: make_label("false".to_string()),
-                };
+                let false_label = Identifier(make_label("false".to_string()));
+                let end_label = Identifier(make_label("end".to_string()));
 
-                let end_label = Identifier {
-                    s: make_label("end".to_string()),
-                };
-
-                let dst = Val::Var(Identifier {
-                    s: make_temporary(),
-                });
+                let dst = Val::Var(Identifier(make_temporary()));
 
                 let left = convert_exp(*left, instructions)?;
                 instructions.push(Instruction::JumpIfZero(left, false_label.clone()));
@@ -164,16 +153,10 @@ fn convert_exp(
                 Ok(dst)
             }
             ast::BinaryOperator::LogicalOr => {
-                let true_label = Identifier {
-                    s: make_label("true".to_string()),
-                };
-                let end_label = Identifier {
-                    s: make_label("end".to_string()),
-                };
+                let true_label = Identifier(make_label("true".to_string()));
+                let end_label = Identifier(make_label("end".to_string()));
 
-                let dst = Val::Var(Identifier {
-                    s: make_temporary(),
-                });
+                let dst = Val::Var(Identifier(make_temporary()));
 
                 let left = convert_exp(*left, instructions)?;
                 instructions.push(Instruction::JumpIfNotZero(left, true_label.clone()));
@@ -195,9 +178,7 @@ fn convert_exp(
                 let left = convert_exp(*left, instructions)?;
                 let right = convert_exp(*right, instructions)?;
 
-                let dst = Val::Var(Identifier {
-                    s: make_temporary(),
-                });
+                let dst = Val::Var(Identifier(make_temporary()));
 
                 let op = convert_binop(&op)?;
 
@@ -279,9 +260,7 @@ mod tests {
         assert_eq!(
             result,
             tacky::Program::Program(tacky::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 vec![tacky::Instruction::Return(tacky::Val::Constant(1))]
             ))
         )
@@ -296,29 +275,19 @@ mod tests {
         assert_eq!(
             result,
             tacky::Program::Program(tacky::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 vec![
                     tacky::Instruction::Unary(
                         tacky::UnaryOperator::Negate,
                         tacky::Val::Constant(1),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.1".to_string())),
                     ),
                     tacky::Instruction::Unary(
                         tacky::UnaryOperator::Complement,
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        }),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.1".to_string())),
+                        tacky::Val::Var(Identifier("tmp.2".to_string())),
                     ),
-                    tacky::Instruction::Return(tacky::Val::Var(Identifier {
-                        s: "tmp.2".to_string()
-                    })),
+                    tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.2".to_string()))),
                 ]
             ))
         )
@@ -334,51 +303,33 @@ mod tests {
         assert_eq!(
             result,
             tacky::Program::Program(tacky::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 vec![
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::Add,
                         tacky::Val::Constant(1),
                         tacky::Val::Constant(2),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.1".to_string())),
                     ),
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::Multiply,
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.1".to_string())),
                         tacky::Val::Constant(3),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.2".to_string())),
                     ),
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::Devide,
                         tacky::Val::Constant(4),
                         tacky::Val::Constant(5),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.3".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.3".to_string())),
                     ),
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::Subtract,
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        }),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.3".to_string()
-                        }),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.4".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.2".to_string())),
+                        tacky::Val::Var(Identifier("tmp.3".to_string())),
+                        tacky::Val::Var(Identifier("tmp.4".to_string())),
                     ),
-                    tacky::Instruction::Return(tacky::Val::Var(Identifier {
-                        s: "tmp.4".to_string()
-                    })),
+                    tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.4".to_string()))),
                 ]
             ))
         )
@@ -394,61 +345,39 @@ mod tests {
         assert_eq!(
             result,
             tacky::Program::Program(tacky::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 vec![
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::LeftShift,
                         tacky::Val::Constant(4),
                         tacky::Val::Constant(5),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.1".to_string())),
                     ),
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::RightShift,
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.1".to_string())),
                         tacky::Val::Constant(6),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.2".to_string())),
                     ),
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::And,
                         tacky::Val::Constant(3),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        }),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.3".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.2".to_string())),
+                        tacky::Val::Var(Identifier("tmp.3".to_string())),
                     ),
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::Xor,
                         tacky::Val::Constant(2),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.3".to_string()
-                        }),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.4".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.3".to_string())),
+                        tacky::Val::Var(Identifier("tmp.4".to_string())),
                     ),
                     tacky::Instruction::Binary(
                         tacky::BinaryOperator::Or,
                         tacky::Val::Constant(1),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.4".to_string()
-                        }),
-                        tacky::Val::Var(Identifier {
-                            s: "tmp.5".to_string()
-                        }),
+                        tacky::Val::Var(Identifier("tmp.4".to_string())),
+                        tacky::Val::Var(Identifier("tmp.5".to_string())),
                     ),
-                    tacky::Instruction::Return(tacky::Val::Var(Identifier {
-                        s: "tmp.5".to_string()
-                    })),
+                    tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.5".to_string()))),
                 ]
             ))
         )
@@ -464,90 +393,34 @@ mod tests {
         assert_eq!(
             result,
             tacky::Program::Program(tacky::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 vec![
                     Instruction::Unary(
                         UnaryOperator::Not,
                         Val::Constant(1),
-                        Val::Var(Identifier {
-                            s: "tmp.3".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.3".to_string())),
                     ),
                     Instruction::JumpIfZero(
-                        Val::Var(Identifier {
-                            s: "tmp.3".to_string()
-                        }),
-                        Identifier {
-                            s: "false.3".to_string()
-                        }
+                        Val::Var(Identifier("tmp.3".to_string())),
+                        Identifier("false.3".to_string())
                     ),
-                    Instruction::JumpIfZero(
-                        Val::Constant(2),
-                        Identifier {
-                            s: "false.3".to_string()
-                        }
-                    ),
-                    Instruction::Copy(
-                        Val::Constant(1),
-                        Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        })
-                    ),
-                    Instruction::Jump(Identifier {
-                        s: "end.4".to_string()
-                    }),
-                    Instruction::Label(Identifier {
-                        s: "false.3".to_string()
-                    }),
-                    Instruction::Copy(
-                        Val::Constant(0),
-                        Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        })
-                    ),
-                    Instruction::Label(Identifier {
-                        s: "end.4".to_string()
-                    }),
+                    Instruction::JumpIfZero(Val::Constant(2), Identifier("false.3".to_string())),
+                    Instruction::Copy(Val::Constant(1), Val::Var(Identifier("tmp.2".to_string()))),
+                    Instruction::Jump(Identifier("end.4".to_string())),
+                    Instruction::Label(Identifier("false.3".to_string())),
+                    Instruction::Copy(Val::Constant(0), Val::Var(Identifier("tmp.2".to_string()))),
+                    Instruction::Label(Identifier("end.4".to_string())),
                     Instruction::JumpIfNotZero(
-                        Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        }),
-                        Identifier {
-                            s: "true.1".to_string()
-                        }
+                        Val::Var(Identifier("tmp.2".to_string())),
+                        Identifier("true.1".to_string())
                     ),
-                    Instruction::JumpIfNotZero(
-                        Val::Constant(3),
-                        Identifier {
-                            s: "true.1".to_string()
-                        }
-                    ),
-                    Instruction::Copy(
-                        Val::Constant(0),
-                        Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        })
-                    ),
-                    Instruction::Jump(Identifier {
-                        s: "end.2".to_string()
-                    }),
-                    Instruction::Label(Identifier {
-                        s: "true.1".to_string()
-                    }),
-                    Instruction::Copy(
-                        Val::Constant(1),
-                        Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        })
-                    ),
-                    Instruction::Label(Identifier {
-                        s: "end.2".to_string()
-                    }),
-                    tacky::Instruction::Return(tacky::Val::Var(Identifier {
-                        s: "tmp.1".to_string()
-                    })),
+                    Instruction::JumpIfNotZero(Val::Constant(3), Identifier("true.1".to_string())),
+                    Instruction::Copy(Val::Constant(0), Val::Var(Identifier("tmp.1".to_string()))),
+                    Instruction::Jump(Identifier("end.2".to_string())),
+                    Instruction::Label(Identifier("true.1".to_string())),
+                    Instruction::Copy(Val::Constant(1), Val::Var(Identifier("tmp.1".to_string()))),
+                    Instruction::Label(Identifier("end.2".to_string())),
+                    tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.1".to_string()))),
                 ]
             ))
         )
@@ -565,71 +438,45 @@ mod tests {
         assert_eq!(
             result,
             tacky::Program::Program(tacky::Function::Function(
-                Identifier {
-                    s: "main".to_string()
-                },
+                Identifier("main".to_string()),
                 vec![
                     Instruction::Binary(
                         BinaryOperator::Equal,
                         Val::Constant(1),
                         Val::Constant(2),
-                        Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.1".to_string())),
                     ),
                     Instruction::Binary(
                         BinaryOperator::LessThan,
                         Val::Constant(3),
                         Val::Constant(4),
-                        Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.2".to_string())),
                     ),
                     Instruction::Binary(
                         BinaryOperator::GreaterThan,
-                        Val::Var(Identifier {
-                            s: "tmp.2".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.2".to_string())),
                         Val::Constant(5),
-                        Val::Var(Identifier {
-                            s: "tmp.3".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.3".to_string())),
                     ),
                     Instruction::Binary(
                         BinaryOperator::LessOrEqual,
-                        Val::Var(Identifier {
-                            s: "tmp.3".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.3".to_string())),
                         Val::Constant(6),
-                        Val::Var(Identifier {
-                            s: "tmp.4".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.4".to_string())),
                     ),
                     Instruction::Binary(
                         BinaryOperator::GreaterOrEqual,
-                        Val::Var(Identifier {
-                            s: "tmp.4".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.4".to_string())),
                         Val::Constant(7),
-                        Val::Var(Identifier {
-                            s: "tmp.5".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.5".to_string())),
                     ),
                     Instruction::Binary(
                         BinaryOperator::NotEqual,
-                        Val::Var(Identifier {
-                            s: "tmp.1".to_string()
-                        }),
-                        Val::Var(Identifier {
-                            s: "tmp.5".to_string()
-                        }),
-                        Val::Var(Identifier {
-                            s: "tmp.6".to_string()
-                        }),
+                        Val::Var(Identifier("tmp.1".to_string())),
+                        Val::Var(Identifier("tmp.5".to_string())),
+                        Val::Var(Identifier("tmp.6".to_string())),
                     ),
-                    tacky::Instruction::Return(tacky::Val::Var(Identifier {
-                        s: "tmp.6".to_string()
-                    })),
+                    tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.6".to_string()))),
                 ]
             ))
         )

@@ -40,7 +40,7 @@ fn generate_function(f: Function) -> Result<String, CodegenError> {
 
     let code = format!(
         "\t.global {name}\n{name}:\n{push}\n{insts}",
-        name = id.s,
+        name = id.0,
         push = "\tpushq\t%rbp\n\tmovq\t%rsp, %rbp",
         insts = generate_instruction(insts)?
     );

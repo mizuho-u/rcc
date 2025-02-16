@@ -50,6 +50,4 @@ pub enum BinaryOperator {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Identifier {
-    pub s: String,
-}
+pub struct Identifier(pub String);
