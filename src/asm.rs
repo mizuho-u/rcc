@@ -122,6 +122,7 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                 let op: UnaryOperator = match op {
                     tacky::UnaryOperator::Complement => UnaryOperator::Not,
                     tacky::UnaryOperator::Negate => UnaryOperator::Neg,
+                    tacky::UnaryOperator::Not => todo!(),
                 };
 
                 let src = convert_exp(src)?;
@@ -179,8 +180,19 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                             dst: dst,
                         });
                     }
+                    tacky::BinaryOperator::Equal => todo!(),
+                    tacky::BinaryOperator::NotEqual => todo!(),
+                    tacky::BinaryOperator::LessThan => todo!(),
+                    tacky::BinaryOperator::LessOrEqual => todo!(),
+                    tacky::BinaryOperator::GreaterThan => todo!(),
+                    tacky::BinaryOperator::GreaterOrEqual => todo!(),
                 };
             }
+            tacky::Instruction::Copy(val, val1) => todo!(),
+            tacky::Instruction::Jump(identifier) => todo!(),
+            tacky::Instruction::JumpIfZero(val, identifier) => todo!(),
+            tacky::Instruction::JumpIfNotZero(val, identifier) => todo!(),
+            tacky::Instruction::Label(identifier) => todo!(),
         }
     }
 
