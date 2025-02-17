@@ -21,10 +21,25 @@ pub enum Instruction {
     Mov { src: Operand, dst: Operand },
     Unary(UnaryOperator, Operand),
     Binary(BinaryOperator, Operand, Operand),
+    Cmp(Operand, Operand),
     Idiv(Operand),
     Cdq,
+    Jmp(Identifier),
+    JmpCC(JumpCondition, Identifier),
+    SetCC(JumpCondition, Operand),
+    Label(Identifier),
     AllocateStack(i32),
     Ret,
+}
+
+#[derive(PartialEq, Debug, Clone)]
+pub enum JumpCondition {
+    E,
+    NE,
+    G,
+    GE,
+    L,
+    LE,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -117,20 +132,26 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                 insts.push(Instruction::Ret);
             }
             tacky::Instruction::Unary(op, src, dst) => {
-                let op: UnaryOperator = match op {
-                    tacky::UnaryOperator::Complement => UnaryOperator::Not,
-                    tacky::UnaryOperator::Negate => UnaryOperator::Neg,
-                    tacky::UnaryOperator::Not => todo!(),
-                };
-
                 let src = convert_exp(src)?;
                 let dst = convert_exp(dst)?;
 
-                insts.push(Instruction::Mov {
-                    src: src,
-                    dst: dst.clone(),
-                });
-                insts.push(Instruction::Unary(op, dst));
+                match op {
+                    tacky::UnaryOperator::Complement | tacky::UnaryOperator::Negate => {
+                        insts.push(Instruction::Mov {
+                            src: src,
+                            dst: dst.clone(),
+                        });
+                        insts.push(Instruction::Unary(convert_uop(op)?, dst));
+                    }
+                    tacky::UnaryOperator::Not => {
+                        insts.push(Instruction::Cmp(Operand::Immediate(0), src));
+                        insts.push(Instruction::Mov {
+                            src: Operand::Immediate(0),
+                            dst: dst.clone(),
+                        });
+                        insts.push(Instruction::SetCC(JumpCondition::E, dst));
+                    }
+                };
             }
             tacky::Instruction::Binary(op, left, right, dst) => {
                 let left = convert_exp(left)?;
@@ -178,19 +199,47 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                             dst: dst,
                         });
                     }
-                    tacky::BinaryOperator::Equal => todo!(),
-                    tacky::BinaryOperator::NotEqual => todo!(),
-                    tacky::BinaryOperator::LessThan => todo!(),
-                    tacky::BinaryOperator::LessOrEqual => todo!(),
-                    tacky::BinaryOperator::GreaterThan => todo!(),
-                    tacky::BinaryOperator::GreaterOrEqual => todo!(),
+                    tacky::BinaryOperator::Equal
+                    | tacky::BinaryOperator::NotEqual
+                    | tacky::BinaryOperator::LessThan
+                    | tacky::BinaryOperator::LessOrEqual
+                    | tacky::BinaryOperator::GreaterThan
+                    | tacky::BinaryOperator::GreaterOrEqual => {
+                        insts.push(Instruction::Cmp(left, right));
+                        insts.push(Instruction::Mov {
+                            src: Operand::Immediate(0),
+                            dst: dst.clone(),
+                        });
+                        insts.push(Instruction::SetCC(jump_condition_from(op)?, dst));
+                    }
                 };
             }
-            tacky::Instruction::Copy(val, val1) => todo!(),
-            tacky::Instruction::Jump(identifier) => todo!(),
-            tacky::Instruction::JumpIfZero(val, identifier) => todo!(),
-            tacky::Instruction::JumpIfNotZero(val, identifier) => todo!(),
-            tacky::Instruction::Label(identifier) => todo!(),
+            tacky::Instruction::Copy(v1, v2) => {
+                insts.push(Instruction::Mov {
+                    src: convert_exp(v1)?,
+                    dst: convert_exp(v2)?,
+                });
+            }
+            tacky::Instruction::Jump(identifier) => {
+                insts.push(Instruction::Jmp(Identifier(identifier.0)));
+            }
+            tacky::Instruction::JumpIfZero(v, identifier) => {
+                insts.push(Instruction::Cmp(Operand::Immediate(0), convert_exp(v)?));
+                insts.push(Instruction::JmpCC(
+                    JumpCondition::E,
+                    Identifier(identifier.0),
+                ));
+            }
+            tacky::Instruction::JumpIfNotZero(v, identifier) => {
+                insts.push(Instruction::Cmp(Operand::Immediate(0), convert_exp(v)?));
+                insts.push(Instruction::JmpCC(
+                    JumpCondition::NE,
+                    Identifier(identifier.0),
+                ));
+            }
+            tacky::Instruction::Label(identifier) => {
+                insts.push(Instruction::Label(Identifier(identifier.0)));
+            }
         }
     }
 
@@ -208,6 +257,28 @@ fn convert_binop(op: tacky::BinaryOperator) -> Result<BinaryOperator, AssemblyEr
         tacky::BinaryOperator::LeftShift => Ok(BinaryOperator::Shl),
         tacky::BinaryOperator::RightShift => Ok(BinaryOperator::Shr),
         _ => Err(AssemblyError(format!("cannot convert binary op"))),
+    }
+}
+
+fn convert_uop(op: tacky::UnaryOperator) -> Result<UnaryOperator, AssemblyError> {
+    match op {
+        tacky::UnaryOperator::Complement => Ok(UnaryOperator::Not),
+        tacky::UnaryOperator::Negate => Ok(UnaryOperator::Neg),
+        _ => Err(AssemblyError(format!("cannot convert unary op"))),
+    }
+}
+
+fn jump_condition_from(op: tacky::BinaryOperator) -> Result<JumpCondition, AssemblyError> {
+    match op {
+        tacky::BinaryOperator::Equal => Ok(JumpCondition::E),
+        tacky::BinaryOperator::NotEqual => Ok(JumpCondition::NE),
+        tacky::BinaryOperator::LessThan => Ok(JumpCondition::L),
+        tacky::BinaryOperator::LessOrEqual => Ok(JumpCondition::LE),
+        tacky::BinaryOperator::GreaterThan => Ok(JumpCondition::G),
+        tacky::BinaryOperator::GreaterOrEqual => Ok(JumpCondition::GE),
+        _ => Err(AssemblyError(format!(
+            "cannot convert binary op to jump condition"
+        ))),
     }
 }
 
@@ -234,8 +305,6 @@ fn replace_pseudo(p: &mut Program) -> Result<(), AssemblyError> {
                 replace_operand(dst)?;
             }
             Instruction::Unary(_, o) => replace_operand(o)?,
-            Instruction::AllocateStack(_) => {}
-            Instruction::Ret => {}
             Instruction::Binary(_, src, dst) => {
                 replace_operand(src)?;
                 replace_operand(dst)?;
@@ -243,7 +312,12 @@ fn replace_pseudo(p: &mut Program) -> Result<(), AssemblyError> {
             Instruction::Idiv(operand) => {
                 replace_operand(operand)?;
             }
-            Instruction::Cdq => {}
+            Instruction::Cmp(o1, o2) => {
+                replace_operand(o1)?;
+                replace_operand(o2)?;
+            }
+            Instruction::SetCC(_, o) => replace_operand(o)?,
+            _ => {}
         }
     }
 
@@ -340,16 +414,12 @@ fn rewrite_stack_operand(
                 _ => rewrited.push(inst.clone()),
             },
             //　divのオペランドに即値はとれない
-            Instruction::Idiv(operand) => {
-                if let Operand::Immediate(_) = operand {
-                    rewrited.push(Instruction::Mov {
-                        src: operand.clone(),
-                        dst: Operand::Reg(Register::R10),
-                    });
-                    rewrited.push(Instruction::Idiv(Operand::Reg(Register::R10)));
-                } else {
-                    rewrited.push(inst.clone());
-                }
+            Instruction::Idiv(o @ Operand::Immediate(_)) => {
+                rewrited.push(Instruction::Mov {
+                    src: o.clone(),
+                    dst: Operand::Reg(Register::R10),
+                });
+                rewrited.push(Instruction::Idiv(Operand::Reg(Register::R10)));
             }
             //　addとsubのオペランドの両方にスタックをとることはできない
             Instruction::Binary(op, Operand::Stack(s1), Operand::Stack(s2))
@@ -405,6 +475,25 @@ fn rewrite_stack_operand(
                     dst: Operand::Stack(*dst),
                 });
             }
+            // cmpのオペランドの両方にスタックをとることはできない
+            Instruction::Cmp(Operand::Stack(s1), Operand::Stack(s2)) => {
+                rewrited.push(Instruction::Mov {
+                    src: Operand::Stack(*s1),
+                    dst: Operand::Reg(Register::R10),
+                });
+                rewrited.push(Instruction::Cmp(
+                    Operand::Reg(Register::R10),
+                    Operand::Stack(*s2),
+                ));
+            }
+            // cmpのリザルトに即値は指定できない
+            Instruction::Cmp(o, imm @ Operand::Immediate(_)) => {
+                rewrited.push(Instruction::Mov {
+                    src: imm.clone(),
+                    dst: Operand::Reg(Register::R11),
+                });
+                rewrited.push(Instruction::Cmp(o.clone(), Operand::Reg(Register::R11)));
+            }
             _ => rewrited.push(inst.clone()),
         }
     }
@@ -415,8 +504,8 @@ fn rewrite_stack_operand(
 #[cfg(test)]
 mod tests {
     use crate::asm::{
-        BinaryOperator, Function, Identifier, Instruction, Operand, Program, Register,
-        UnaryOperator,
+        BinaryOperator, Function, Identifier, Instruction, JumpCondition, Operand, Program,
+        Register, UnaryOperator,
     };
     use crate::parse::parse;
     use crate::tacky::convert as tconvert;
@@ -720,6 +809,177 @@ mod tests {
                     ),
                     Instruction::Mov {
                         src: Operand::Stack(-20),
+                        dst: Operand::Reg(Register::AX),
+                    },
+                    Instruction::Ret
+                ]
+            }),
+            "{result:#?}"
+        );
+    }
+
+    #[test]
+    fn logical_operator() {
+        let mut result =
+            token::tokenize(" int main(void) { return !1 && 2 || 3; } ".into()).unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = tconvert(result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            Program::Program(Function::Function {
+                identifier: Identifier("main".to_string()),
+                instructions: vec![
+                    Instruction::AllocateStack(12),
+                    // !1
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Reg(Register::R11)
+                    },
+                    Instruction::Cmp(Operand::Immediate(0), Operand::Reg(Register::R11)),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-4),
+                    },
+                    Instruction::SetCC(JumpCondition::E, Operand::Stack(-4)),
+                    // (!1 &&)
+                    Instruction::Cmp(Operand::Immediate(0), Operand::Stack(-4)),
+                    Instruction::JmpCC(JumpCondition::E, Identifier("false.3".to_string())),
+                    // 2
+                    Instruction::Mov {
+                        src: Operand::Immediate(2),
+                        dst: Operand::Reg(Register::R11)
+                    },
+                    Instruction::Cmp(Operand::Immediate(0), Operand::Reg(Register::R11)),
+                    Instruction::JmpCC(JumpCondition::E, Identifier("false.3".to_string())),
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::Jmp(Identifier("end.4".to_string())),
+                    Instruction::Label(Identifier("false.3".to_string())),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::Label(Identifier("end.4".to_string())),
+                    // ((!1 && 2) ||)
+                    Instruction::Cmp(Operand::Immediate(0), Operand::Stack(-8)),
+                    Instruction::JmpCC(JumpCondition::NE, Identifier("true.1".to_string())),
+                    // 3
+                    Instruction::Mov {
+                        src: Operand::Immediate(3),
+                        dst: Operand::Reg(Register::R11)
+                    },
+                    Instruction::Cmp(Operand::Immediate(0), Operand::Reg(Register::R11)),
+                    Instruction::JmpCC(JumpCondition::NE, Identifier("true.1".to_string())),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-12),
+                    },
+                    Instruction::Jmp(Identifier("end.2".to_string())),
+                    Instruction::Label(Identifier("true.1".to_string())),
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Stack(-12),
+                    },
+                    Instruction::Label(Identifier("end.2".to_string())),
+                    Instruction::Mov {
+                        src: Operand::Stack(-12),
+                        dst: Operand::Reg(Register::AX),
+                    },
+                    Instruction::Ret
+                ]
+            }),
+            "{result:#?}"
+        );
+    }
+
+    #[test]
+    fn relational_operator() {
+        // (1 == 2) != ((((3 < 4) > 5) <= 6) >= 7)
+        let mut result =
+            token::tokenize(" int main(void) { return 1 == 2 != 3 < 4 > 5 <= 6 >= 7; } ".into())
+                .unwrap();
+        let result = parse(&mut result).unwrap();
+        let result = tconvert(result).unwrap();
+        let result = convert(result).unwrap();
+
+        assert_eq!(
+            result,
+            Program::Program(Function::Function {
+                identifier: Identifier("main".to_string()),
+                instructions: vec![
+                    Instruction::AllocateStack(24),
+                    // (1 == 2)
+                    Instruction::Mov {
+                        src: Operand::Immediate(2,),
+                        dst: Operand::Reg(Register::R11),
+                    },
+                    Instruction::Cmp(Operand::Immediate(1,), Operand::Reg(Register::R11)),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-4),
+                    },
+                    Instruction::SetCC(JumpCondition::E, Operand::Stack(-4)),
+                    // (3 < 4)
+                    Instruction::Mov {
+                        src: Operand::Immediate(4),
+                        dst: Operand::Reg(Register::R11),
+                    },
+                    Instruction::Cmp(Operand::Immediate(3,), Operand::Reg(Register::R11)),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::SetCC(JumpCondition::L, Operand::Stack(-8)),
+                    // ((3 < 4) > 5)
+                    Instruction::Mov {
+                        src: Operand::Immediate(5),
+                        dst: Operand::Reg(Register::R11),
+                    },
+                    Instruction::Cmp(Operand::Stack(-8,), Operand::Reg(Register::R11)),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-12),
+                    },
+                    Instruction::SetCC(JumpCondition::G, Operand::Stack(-12)),
+                    // (((3 < 4) > 5) <= 6)
+                    Instruction::Mov {
+                        src: Operand::Immediate(6),
+                        dst: Operand::Reg(Register::R11),
+                    },
+                    Instruction::Cmp(Operand::Stack(-12), Operand::Reg(Register::R11)),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-16),
+                    },
+                    Instruction::SetCC(JumpCondition::LE, Operand::Stack(-16)),
+                    // ((((3 < 4) > 5) <= 6) >= 7)
+                    Instruction::Mov {
+                        src: Operand::Immediate(7),
+                        dst: Operand::Reg(Register::R11),
+                    },
+                    Instruction::Cmp(Operand::Stack(-16), Operand::Reg(Register::R11)),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-20),
+                    },
+                    Instruction::SetCC(JumpCondition::GE, Operand::Stack(-20)),
+                    // (1 == 2) != ((((3 < 4) > 5) <= 6) >= 7)
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Cmp(Operand::Reg(Register::R10), Operand::Stack(-20)),
+                    Instruction::Mov {
+                        src: Operand::Immediate(0),
+                        dst: Operand::Stack(-24),
+                    },
+                    Instruction::SetCC(JumpCondition::NE, Operand::Stack(-24)),
+                    Instruction::Mov {
+                        src: Operand::Stack(-24),
                         dst: Operand::Reg(Register::AX),
                     },
                     Instruction::Ret

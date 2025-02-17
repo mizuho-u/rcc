@@ -49,11 +49,12 @@ fn main() {
     }
 
     let p = asm::convert(p).unwrap_or_else(|_| exit(1));
-    let code = codegen::generate(p).unwrap_or_else(|_| exit(1));
 
     if matches!(args.codegen, Some(true)) {
         return;
     }
+
+    let code = codegen::generate(p).unwrap_or_else(|_| exit(1));
 
     let exe_dir = source_path.parent().unwrap();
     let exe_file = source_path.file_stem().unwrap();

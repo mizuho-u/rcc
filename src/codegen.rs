@@ -77,6 +77,11 @@ fn generate_instruction(insts: Vec<Instruction>) -> Result<String, CodegenError>
             }
             Instruction::Idiv(o) => format!("\tidivl\t{o}\n", o = generate_operand(o)?),
             Instruction::Cdq => format!("\tcdq\n"),
+            Instruction::Cmp(operand, operand1) => todo!(),
+            Instruction::Jmp(identifier) => todo!(),
+            Instruction::JmpCC(jump_condition, identifier) => todo!(),
+            Instruction::SetCC(jump_condition, operand) => todo!(),
+            Instruction::Label(identifier) => todo!(),
         };
 
         code += &op;
