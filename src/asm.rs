@@ -205,7 +205,12 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                     | tacky::BinaryOperator::LessOrEqual
                     | tacky::BinaryOperator::GreaterThan
                     | tacky::BinaryOperator::GreaterOrEqual => {
-                        insts.push(Instruction::Cmp(left, right));
+                        // AT&T記法でオペランドが逆になる
+                        // 1 greater than 2
+                        // cmp 2, 1
+                        // 1 - 2
+                        // ZF = 0, SF = 1
+                        insts.push(Instruction::Cmp(right, left));
                         insts.push(Instruction::Mov {
                             src: Operand::Immediate(0),
                             dst: dst.clone(),
@@ -914,10 +919,10 @@ mod tests {
                     Instruction::AllocateStack(24),
                     // (1 == 2)
                     Instruction::Mov {
-                        src: Operand::Immediate(2,),
+                        src: Operand::Immediate(1),
                         dst: Operand::Reg(Register::R11),
                     },
-                    Instruction::Cmp(Operand::Immediate(1,), Operand::Reg(Register::R11)),
+                    Instruction::Cmp(Operand::Immediate(2), Operand::Reg(Register::R11)),
                     Instruction::Mov {
                         src: Operand::Immediate(0),
                         dst: Operand::Stack(-4),
@@ -925,43 +930,31 @@ mod tests {
                     Instruction::SetCC(JumpCondition::E, Operand::Stack(-4)),
                     // (3 < 4)
                     Instruction::Mov {
-                        src: Operand::Immediate(4),
+                        src: Operand::Immediate(3),
                         dst: Operand::Reg(Register::R11),
                     },
-                    Instruction::Cmp(Operand::Immediate(3,), Operand::Reg(Register::R11)),
+                    Instruction::Cmp(Operand::Immediate(4), Operand::Reg(Register::R11)),
                     Instruction::Mov {
                         src: Operand::Immediate(0),
                         dst: Operand::Stack(-8),
                     },
                     Instruction::SetCC(JumpCondition::L, Operand::Stack(-8)),
                     // ((3 < 4) > 5)
-                    Instruction::Mov {
-                        src: Operand::Immediate(5),
-                        dst: Operand::Reg(Register::R11),
-                    },
-                    Instruction::Cmp(Operand::Stack(-8,), Operand::Reg(Register::R11)),
+                    Instruction::Cmp(Operand::Immediate(5), Operand::Stack(-8)),
                     Instruction::Mov {
                         src: Operand::Immediate(0),
                         dst: Operand::Stack(-12),
                     },
                     Instruction::SetCC(JumpCondition::G, Operand::Stack(-12)),
                     // (((3 < 4) > 5) <= 6)
-                    Instruction::Mov {
-                        src: Operand::Immediate(6),
-                        dst: Operand::Reg(Register::R11),
-                    },
-                    Instruction::Cmp(Operand::Stack(-12), Operand::Reg(Register::R11)),
+                    Instruction::Cmp(Operand::Immediate(6), Operand::Stack(-12)),
                     Instruction::Mov {
                         src: Operand::Immediate(0),
                         dst: Operand::Stack(-16),
                     },
                     Instruction::SetCC(JumpCondition::LE, Operand::Stack(-16)),
                     // ((((3 < 4) > 5) <= 6) >= 7)
-                    Instruction::Mov {
-                        src: Operand::Immediate(7),
-                        dst: Operand::Reg(Register::R11),
-                    },
-                    Instruction::Cmp(Operand::Stack(-16), Operand::Reg(Register::R11)),
+                    Instruction::Cmp(Operand::Immediate(7), Operand::Stack(-16)),
                     Instruction::Mov {
                         src: Operand::Immediate(0),
                         dst: Operand::Stack(-20),
@@ -969,10 +962,10 @@ mod tests {
                     Instruction::SetCC(JumpCondition::GE, Operand::Stack(-20)),
                     // (1 == 2) != ((((3 < 4) > 5) <= 6) >= 7)
                     Instruction::Mov {
-                        src: Operand::Stack(-4),
+                        src: Operand::Stack(-20),
                         dst: Operand::Reg(Register::R10),
                     },
-                    Instruction::Cmp(Operand::Reg(Register::R10), Operand::Stack(-20)),
+                    Instruction::Cmp(Operand::Reg(Register::R10), Operand::Stack(-4)),
                     Instruction::Mov {
                         src: Operand::Immediate(0),
                         dst: Operand::Stack(-24),
