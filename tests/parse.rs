@@ -9,7 +9,9 @@ fn valid_parse() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Constant(1))
+            vec![BlockItem::Statement(Statement::Return(
+                Expression::Constant(1)
+            ))]
         ))
     )
 }
@@ -22,13 +24,13 @@ fn valid_parse_unary() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Unary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Unary(
                 UnaryOperator::Complement,
                 Box::new(Expression::Unary(
                     UnaryOperator::Negate,
                     Box::new(Expression::Constant(1))
                 ))
-            ))
+            )))]
         ))
     )
 }
@@ -41,11 +43,11 @@ fn valid_parse_binary1() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Add,
                 Box::new(Expression::Constant(1)),
                 Box::new(Expression::Constant(2)),
-            ))
+            )))]
         ))
     )
 }
@@ -58,7 +60,7 @@ fn valid_parse_binary2() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Add,
                 Box::new(Expression::Binary(
                     BinaryOperator::Add,
@@ -66,7 +68,7 @@ fn valid_parse_binary2() {
                     Box::new(Expression::Constant(2)),
                 )),
                 Box::new(Expression::Constant(3)),
-            ))
+            )))]
         ))
     )
 }
@@ -79,7 +81,7 @@ fn valid_parse_binary3() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Add,
                 Box::new(Expression::Constant(1)),
                 Box::new(Expression::Binary(
@@ -87,7 +89,7 @@ fn valid_parse_binary3() {
                     Box::new(Expression::Constant(2)),
                     Box::new(Expression::Constant(3)),
                 )),
-            ))
+            )))]
         ))
     )
 }
@@ -100,7 +102,7 @@ fn valid_parse_binary4() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Add,
                 Box::new(Expression::Constant(1)),
                 Box::new(Expression::Binary(
@@ -108,7 +110,7 @@ fn valid_parse_binary4() {
                     Box::new(Expression::Constant(2)),
                     Box::new(Expression::Constant(3)),
                 )),
-            ))
+            )))]
         ))
     )
 }
@@ -121,7 +123,7 @@ fn valid_parse_binary5() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Multiply,
                 Box::new(Expression::Binary(
                     BinaryOperator::Add,
@@ -129,7 +131,7 @@ fn valid_parse_binary5() {
                     Box::new(Expression::Constant(2)),
                 )),
                 Box::new(Expression::Constant(3)),
-            ))
+            )))]
         ))
     )
 }
@@ -142,7 +144,7 @@ fn valid_parse_binary6() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Multiply,
                 Box::new(Expression::Binary(
                     BinaryOperator::Add,
@@ -156,7 +158,7 @@ fn valid_parse_binary6() {
                     UnaryOperator::Complement,
                     Box::new(Expression::Constant(3))
                 )),
-            ))
+            )))]
         ))
     )
 }
@@ -169,11 +171,11 @@ fn valid_parse_bitwise_binary_operator1() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::And,
                 Box::new(Expression::Constant(3)),
                 Box::new(Expression::Constant(1)),
-            ))
+            )))]
         ))
     )
 }
@@ -187,7 +189,7 @@ fn valid_parse_bitwise_binary_operator2() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Or,
                 Box::new(Expression::Constant(1)),
                 Box::new(Expression::Binary(
@@ -207,7 +209,7 @@ fn valid_parse_bitwise_binary_operator2() {
                         ))
                     )),
                 )),
-            ))
+            )))]
         ))
     )
 }
@@ -221,7 +223,7 @@ fn valid_parse_bitwise_binary_operator3() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Xor,
                 Box::new(Expression::Binary(
                     BinaryOperator::LeftShit,
@@ -237,7 +239,7 @@ fn valid_parse_bitwise_binary_operator3() {
                     )),
                 )),
                 Box::new(Expression::Constant(5)),
-            ))
+            )))]
         ))
     )
 }
@@ -250,7 +252,7 @@ fn logical_operator() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::LogicalOr,
                 Box::new(Expression::Binary(
                     BinaryOperator::LogicalAnd,
@@ -261,7 +263,7 @@ fn logical_operator() {
                     Box::new(Expression::Constant(2)),
                 )),
                 Box::new(Expression::Constant(3)),
-            ))
+            )))]
         ))
     )
 }
@@ -277,7 +279,7 @@ fn relational_operator() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            Statement::Return(Expression::Binary(
+            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::NotEqualTo,
                 Box::new(Expression::Binary(
                     BinaryOperator::EqualTo,
@@ -301,7 +303,83 @@ fn relational_operator() {
                     )),
                     Box::new(Expression::Constant(7)),
                 )),
-            ))
+            )))]
+        ))
+    )
+}
+
+#[test]
+fn parse_declaration() {
+    let mut result = token::tokenize(" int main(void) { int a = 1; return a; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ]
+        ))
+    )
+}
+
+#[test]
+fn parse_assignment() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 1; int b = 2; a = b; return a * b; } ".into())
+            .unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("b".to_string()),
+                    Some(Expression::Constant(2))
+                )),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Var(Identifier("b".to_string()))),
+                ))),
+                BlockItem::Statement(Statement::Return(Expression::Binary(
+                    BinaryOperator::Multiply,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Var(Identifier("b".to_string()))),
+                )))
+            ]
+        ))
+    )
+}
+
+#[test]
+fn parse_null_statement() {
+    let mut result = token::tokenize(" int main(void) { int a = 1; ; return a; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Statement(Statement::Null),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ]
         ))
     )
 }

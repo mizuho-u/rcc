@@ -89,10 +89,11 @@ fn convert_program(p: parse::Program) -> Result<Program, TackeyError> {
 fn convert_function(f: parse::Function) -> Result<Function, TackeyError> {
     let parse::Function::Function(id, stmt) = f;
 
-    Ok(Function::Function(
-        Identifier(id.0),
-        convert_statement(stmt)?,
-    ))
+    Err(TackeyError("not implemented".to_string()))
+    // Ok(Function::Function(
+    //     Identifier(id.0),
+    //     convert_statement(stmt)?,
+    // ))
 }
 
 fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyError> {
@@ -103,6 +104,8 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             let val = convert_exp(e, &mut instructions)?;
             instructions.push(Instruction::Return(val));
         }
+        parse::Statement::Expression(expression) => todo!(),
+        parse::Statement::Null => todo!(),
     }
 
     Ok(instructions)
@@ -186,6 +189,8 @@ fn convert_exp(
                 Ok(dst)
             }
         },
+        parse::Expression::Var(identifier) => todo!(),
+        parse::Expression::Assignment(expression, expression1) => todo!(),
     }
 }
 

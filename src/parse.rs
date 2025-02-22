@@ -7,19 +7,34 @@ pub enum Program {
 
 #[derive(PartialEq, Debug)]
 pub enum Function {
-    Function(Identifier, Statement),
+    Function(Identifier, Vec<BlockItem>),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum BlockItem {
+    Statement(Statement),
+    Declaration(Declaration),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum Statement {
     Return(Expression),
+    Expression(Expression),
+    Null,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Declaration {
+    Declaration(Identifier, Option<Expression>),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum Expression {
+    Var(Identifier),
     Constant(i32),
     Unary(UnaryOperator, Box<Expression>),
     Binary(BinaryOperator, Box<Expression>, Box<Expression>),
+    Assignment(Box<Expression>, Box<Expression>),
 }
 
 #[derive(PartialEq, Debug)]
@@ -82,66 +97,106 @@ pub fn parse(tokens: &mut Vec<Token>) -> Result<Program, ParseError> {
 }
 
 fn parse_program(tokens: &mut Vec<Token>) -> Result<Program, ParseError> {
-    let f = parse_function(tokens)?;
+    let f = parse_function_definition(tokens)?;
     Ok(Program::Program(f))
 }
 
-fn parse_function(tokens: &mut Vec<Token>) -> Result<Function, ParseError> {
+fn parse_function_definition(tokens: &mut Vec<Token>) -> Result<Function, ParseError> {
     expect(tokens, Token::Int)?;
     let id = parse_identifier(tokens)?;
     expect(tokens, Token::OpenParen)?;
     expect(tokens, Token::Void)?;
     expect(tokens, Token::CloseParen)?;
     expect(tokens, Token::OpenBrace)?;
-    let s = parse_statement(tokens)?;
+
+    let mut body = Vec::new();
+
+    while *peek(tokens) != Token::CloseBrace {
+        body.push(parse_block_item(tokens)?);
+    }
+
     expect(tokens, Token::CloseBrace)?;
 
-    Ok(Function::Function(id, s))
+    Ok(Function::Function(id, body))
+}
+
+fn parse_block_item(tokens: &mut Vec<Token>) -> Result<BlockItem, ParseError> {
+    let next = peek(tokens);
+
+    match next {
+        Token::Int => Ok(BlockItem::Declaration(parse_declaration(tokens)?)),
+        _ => Ok(BlockItem::Statement(parse_statement(tokens)?)),
+    }
+}
+
+fn parse_declaration(tokens: &mut Vec<Token>) -> Result<Declaration, ParseError> {
+    let _type = expect(tokens, Token::Int)?;
+    let id = parse_identifier(tokens)?;
+
+    if *peek(tokens) == Token::Semicolon {
+        consume(tokens);
+        return Ok(Declaration::Declaration(id, None));
+    }
+
+    expect(tokens, Token::AssignmentOperator)?;
+    let exp = parse_exp(tokens, 0)?;
+    expect(tokens, Token::Semicolon)?;
+
+    return Ok(Declaration::Declaration(id, Some(exp)));
 }
 
 fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
-    expect(tokens, Token::Return)?;
+    match *peek(tokens) {
+        Token::Semicolon => {
+            consume(tokens);
+            Ok(Statement::Null)
+        }
+        Token::Return => {
+            consume(tokens);
 
-    let e = parse_exp(tokens, 0)?;
+            let e = parse_exp(tokens, 0)?;
 
-    expect(tokens, Token::Semicolon)?;
+            expect(tokens, Token::Semicolon)?;
 
-    Ok(Statement::Return(e))
+            Ok(Statement::Return(e))
+        }
+        _ => {
+            let e = parse_exp(tokens, 0)?;
+
+            expect(tokens, Token::Semicolon)?;
+
+            Ok(Statement::Expression(e))
+        }
+    }
 }
 
 fn parse_factor(tokens: &mut Vec<Token>) -> Result<Expression, ParseError> {
-    let next: &Token = peek(tokens);
+    let next = consume(tokens);
 
-    match *next {
-        Token::Constant(n) => {
-            consume(tokens);
-            Ok(Expression::Constant(n))
-        }
+    match next {
+        Token::Constant(n) => Ok(Expression::Constant(n)),
         Token::BitwiseComplementOperator => {
-            consume(tokens);
             let exp = parse_factor(tokens)?;
 
             Ok(Expression::Unary(UnaryOperator::Complement, Box::new(exp)))
         }
         Token::NegationOperator => {
-            consume(tokens);
             let exp = parse_factor(tokens)?;
 
             Ok(Expression::Unary(UnaryOperator::Negate, Box::new(exp)))
         }
         Token::LogicalNotOperator => {
-            consume(tokens);
             let exp = parse_factor(tokens)?;
 
             Ok(Expression::Unary(UnaryOperator::Not, Box::new(exp)))
         }
         // Token::DecrementOperator => todo!(),
         Token::OpenParen => {
-            consume(tokens);
             let exp = parse_exp(tokens, 0)?;
             expect(tokens, Token::CloseParen)?;
             Ok(exp)
         }
+        Token::Identifier(id) => Ok(Expression::Var(Identifier(id))),
         _ => return Err(ParseError(format!("Malformed expression {:?}", next))),
     }
 }
@@ -152,34 +207,42 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
     loop {
         let next = peek(tokens);
 
-        if binop_precedence(next) < min_prededence {
-            break;
-        }
+        if *next == Token::AssignmentOperator {
+            let op = consume(tokens);
 
-        match next {
-            Token::NegationOperator
-            | Token::AdditionOperator
-            | Token::DivisionOperator
-            | Token::MultiplicationOperator
-            | Token::RemainderOperator
-            | Token::AndOperator
-            | Token::OrOperator
-            | Token::XorOperator
-            | Token::LeftShiftOperator
-            | Token::RightShiftOperator
-            | Token::LogicalAndOperator
-            | Token::LogicalOrOperator
-            | Token::EqualToOperator
-            | Token::NotEqualToOperator
-            | Token::LessThanOperator
-            | Token::LessOrEqualOperator
-            | Token::GreaterThanOperator
-            | Token::GreaterOrEqualOperator => {
-                let op = consume(tokens);
-                let right = parse_exp(tokens, binop_precedence(&op) + 1)?;
-                left = parse_binop(op, left, right)?;
+            let right = parse_exp(tokens, precedence(&op))?;
+
+            left = Expression::Assignment(Box::new(left), Box::new(right));
+        } else {
+            if precedence(next) < min_prededence {
+                break;
             }
-            _ => break,
+
+            match next {
+                Token::NegationOperator
+                | Token::AdditionOperator
+                | Token::DivisionOperator
+                | Token::MultiplicationOperator
+                | Token::RemainderOperator
+                | Token::AndOperator
+                | Token::OrOperator
+                | Token::XorOperator
+                | Token::LeftShiftOperator
+                | Token::RightShiftOperator
+                | Token::LogicalAndOperator
+                | Token::LogicalOrOperator
+                | Token::EqualToOperator
+                | Token::NotEqualToOperator
+                | Token::LessThanOperator
+                | Token::LessOrEqualOperator
+                | Token::GreaterThanOperator
+                | Token::GreaterOrEqualOperator => {
+                    let op = consume(tokens);
+                    let right = parse_exp(tokens, precedence(&op) + 1)?;
+                    left = parse_binop(op, left, right)?;
+                }
+                _ => break,
+            }
         }
     }
 
@@ -212,7 +275,7 @@ fn parse_binop(op: Token, left: Expression, right: Expression) -> Result<Express
     Ok(Expression::Binary(op, Box::new(left), Box::new(right)))
 }
 
-fn binop_precedence(token: &Token) -> i32 {
+fn precedence(token: &Token) -> i32 {
     match token {
         Token::MultiplicationOperator | Token::DivisionOperator | Token::RemainderOperator => 100,
         Token::AdditionOperator | Token::NegationOperator => 90,
@@ -227,6 +290,7 @@ fn binop_precedence(token: &Token) -> i32 {
         Token::OrOperator => 30,
         Token::LogicalAndOperator => 29,
         Token::LogicalOrOperator => 28,
+        Token::AssignmentOperator => 1,
         _ => 0,
     }
 }
