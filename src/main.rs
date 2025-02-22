@@ -14,6 +14,8 @@ struct Args {
     #[arg(long, action = clap::ArgAction::SetTrue)]
     parse: Option<bool>,
     #[arg(long, action = clap::ArgAction::SetTrue)]
+    validate: Option<bool>,
+    #[arg(long, action = clap::ArgAction::SetTrue)]
     tacky: Option<bool>,
     #[arg(long, action = clap::ArgAction::SetTrue)]
     codegen: Option<bool>,
@@ -39,6 +41,12 @@ fn main() {
     let p = parse::parse(&mut ts).unwrap_or_else(|_| exit(1));
 
     if matches!(args.parse, Some(true)) {
+        return;
+    }
+
+    let p = parse::validate(p).unwrap_or_else(|_| exit(1));
+
+    if matches!(args.validate, Some(true)) {
         return;
     }
 

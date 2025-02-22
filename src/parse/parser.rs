@@ -207,6 +207,10 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
     loop {
         let next = peek(tokens);
 
+        if precedence(next) < min_prededence {
+            break;
+        }
+
         if *next == Token::AssignmentOperator {
             let op = consume(tokens);
 
@@ -214,10 +218,6 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
 
             left = Expression::Assignment(Box::new(left), Box::new(right));
         } else {
-            if precedence(next) < min_prededence {
-                break;
-            }
-
             match next {
                 Token::NegationOperator
                 | Token::AdditionOperator

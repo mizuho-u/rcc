@@ -1,4 +1,5 @@
 pub mod parser;
-mod sem_analyzer;
+mod validate;
 
 pub use parser::*;
+pub use validate::validate;

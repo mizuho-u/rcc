@@ -6,13 +6,14 @@
         {
             "label": "test",
             "type": "shell",
-            "command": "cargo build && ./writing-a-c-compiler-tests/test_compiler ./target/debug/rc --chapter ${input:chapter}"
+            "command": "cargo build && ./writing-a-c-compiler-tests/test_compiler ./target/debug/rc --chapter ${input:chapter} --bitwise"
         },
         {
             "label": "test stage",
             "type": "shell",
-            "command": "cargo build && ./writing-a-c-compiler-tests/test_compiler ./target/debug/rc --chapter ${input:chapter} --stage ${input:stage}"
-        },
+            "command": "cargo build && ./writing-a-c-compiler-tests/test_compiler ./target/debug/rc --chapter ${input:chapter} --stage ${input:stage} --bitwise",
+            "problemMatcher": []
+        }
     ],
     "inputs": [
         {
@@ -28,6 +29,7 @@
             "options": [
                 "lex",
                 "parse",
+                "validate",
                 "tacky",
                 "codegen"
             ],

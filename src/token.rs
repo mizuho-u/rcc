@@ -34,6 +34,7 @@ pub enum Token {
     LessOrEqualOperator,
     GreaterOrEqualOperator,
     AssignmentOperator,
+    // @todo typedef(GLR parser)
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
