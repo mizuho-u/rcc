@@ -33,6 +33,7 @@ pub enum Token {
     GreaterThanOperator,
     LessOrEqualOperator,
     GreaterOrEqualOperator,
+    AssignmentOperator,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -67,7 +68,7 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
         return _tokenize(&s[t.1..], ts);
     }
 
-    if let Some(t) = find_token(s, r"^(~|-|\+|\*|/|%|&|\||\^|!|<|>)", |c| match c {
+    if let Some(t) = find_token(s, r"^(~|-|\+|\*|/|%|&|\||\^|!|<|>|=)", |c| match c {
         "~" => Some(Token::BitwiseComplementOperator),
         "-" => Some(Token::NegationOperator),
         "+" => Some(Token::AdditionOperator),
@@ -80,6 +81,7 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
         "!" => Some(Token::LogicalNotOperator),
         "<" => Some(Token::LessThanOperator),
         ">" => Some(Token::GreaterThanOperator),
+        "=" => Some(Token::AssignmentOperator),
         _ => None,
     }) {
         ts.push(t.0);
@@ -294,6 +296,31 @@ mod tests {
                 Token::Constant(6),
                 Token::GreaterOrEqualOperator,
                 Token::Constant(7),
+                Token::Semicolon,
+                Token::CloseBrace,
+            ]
+        )
+    }
+
+    #[test]
+    fn assignment() {
+        let result = token::tokenize(" int main(void) { int a = 1; return a; } ".into()).unwrap();
+        assert_eq!(
+            result,
+            vec![
+                Token::Int,
+                Token::Identifier("main".to_string()),
+                Token::OpenParen,
+                Token::Void,
+                Token::CloseParen,
+                Token::OpenBrace,
+                Token::Int,
+                Token::Identifier("a".to_string()),
+                Token::AssignmentOperator,
+                Token::Constant(1),
+                Token::Semicolon,
+                Token::Return,
+                Token::Identifier("a".to_string()),
                 Token::Semicolon,
                 Token::CloseBrace,
             ]
