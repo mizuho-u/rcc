@@ -1,4 +1,4 @@
-use crate::ast;
+use crate::parse;
 use std::cell::RefCell;
 
 #[derive(PartialEq, Debug)]
@@ -76,18 +76,18 @@ impl From<String> for TackeyError {
 
 impl std::error::Error for TackeyError {}
 
-pub fn convert(p: ast::Program) -> Result<Program, TackeyError> {
+pub fn convert(p: parse::Program) -> Result<Program, TackeyError> {
     convert_program(p)
 }
 
-fn convert_program(p: ast::Program) -> Result<Program, TackeyError> {
-    let ast::Program::Program(f) = p;
+fn convert_program(p: parse::Program) -> Result<Program, TackeyError> {
+    let parse::Program::Program(f) = p;
 
     Ok(Program::Program(convert_function(f)?))
 }
 
-fn convert_function(f: ast::Function) -> Result<Function, TackeyError> {
-    let ast::Function::Function(id, stmt) = f;
+fn convert_function(f: parse::Function) -> Result<Function, TackeyError> {
+    let parse::Function::Function(id, stmt) = f;
 
     Ok(Function::Function(
         Identifier(id.0),
@@ -95,11 +95,11 @@ fn convert_function(f: ast::Function) -> Result<Function, TackeyError> {
     ))
 }
 
-fn convert_statement(s: ast::Statement) -> Result<Vec<Instruction>, TackeyError> {
+fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyError> {
     let mut instructions = Vec::new();
 
     match s {
-        ast::Statement::Return(e) => {
+        parse::Statement::Return(e) => {
             let val = convert_exp(e, &mut instructions)?;
             instructions.push(Instruction::Return(val));
         }
@@ -109,27 +109,27 @@ fn convert_statement(s: ast::Statement) -> Result<Vec<Instruction>, TackeyError>
 }
 
 fn convert_exp(
-    e: ast::Expression,
+    e: parse::Expression,
     instructions: &mut Vec<Instruction>,
 ) -> Result<Val, TackeyError> {
     match e {
-        ast::Expression::Constant(n) => Ok(Val::Constant(n)),
-        ast::Expression::Unary(op, e) => {
+        parse::Expression::Constant(n) => Ok(Val::Constant(n)),
+        parse::Expression::Unary(op, e) => {
             let src = convert_exp(*e, instructions)?;
             let dst = Val::Var(Identifier(make_temporary()));
 
             let op = match op {
-                ast::UnaryOperator::Complement => UnaryOperator::Complement,
-                ast::UnaryOperator::Negate => UnaryOperator::Negate,
-                ast::UnaryOperator::Not => UnaryOperator::Not,
+                parse::UnaryOperator::Complement => UnaryOperator::Complement,
+                parse::UnaryOperator::Negate => UnaryOperator::Negate,
+                parse::UnaryOperator::Not => UnaryOperator::Not,
             };
 
             instructions.push(Instruction::Unary(op, src, dst.clone()));
 
             Ok(dst)
         }
-        ast::Expression::Binary(op, left, right) => match op {
-            ast::BinaryOperator::LogicalAnd => {
+        parse::Expression::Binary(op, left, right) => match op {
+            parse::BinaryOperator::LogicalAnd => {
                 let false_label = Identifier(make_label("false".to_string()));
                 let end_label = Identifier(make_label("end".to_string()));
 
@@ -152,7 +152,7 @@ fn convert_exp(
 
                 Ok(dst)
             }
-            ast::BinaryOperator::LogicalOr => {
+            parse::BinaryOperator::LogicalOr => {
                 let true_label = Identifier(make_label("true".to_string()));
                 let end_label = Identifier(make_label("end".to_string()));
 
@@ -189,24 +189,24 @@ fn convert_exp(
     }
 }
 
-fn convert_binop(op: &ast::BinaryOperator) -> Result<BinaryOperator, TackeyError> {
+fn convert_binop(op: &parse::BinaryOperator) -> Result<BinaryOperator, TackeyError> {
     let op = match op {
-        ast::BinaryOperator::Subtract => BinaryOperator::Subtract,
-        ast::BinaryOperator::Add => BinaryOperator::Add,
-        ast::BinaryOperator::Multiply => BinaryOperator::Multiply,
-        ast::BinaryOperator::Divide => BinaryOperator::Devide,
-        ast::BinaryOperator::Remainder => BinaryOperator::Remainder,
-        ast::BinaryOperator::And => BinaryOperator::And,
-        ast::BinaryOperator::Or => BinaryOperator::Or,
-        ast::BinaryOperator::Xor => BinaryOperator::Xor,
-        ast::BinaryOperator::LeftShit => BinaryOperator::LeftShift,
-        ast::BinaryOperator::RightShift => BinaryOperator::RightShift,
-        ast::BinaryOperator::EqualTo => BinaryOperator::Equal,
-        ast::BinaryOperator::NotEqualTo => BinaryOperator::NotEqual,
-        ast::BinaryOperator::LessThan => BinaryOperator::LessThan,
-        ast::BinaryOperator::LessOrEqual => BinaryOperator::LessOrEqual,
-        ast::BinaryOperator::GreaterThan => BinaryOperator::GreaterThan,
-        ast::BinaryOperator::GreaterOrEqual => BinaryOperator::GreaterOrEqual,
+        parse::BinaryOperator::Subtract => BinaryOperator::Subtract,
+        parse::BinaryOperator::Add => BinaryOperator::Add,
+        parse::BinaryOperator::Multiply => BinaryOperator::Multiply,
+        parse::BinaryOperator::Divide => BinaryOperator::Devide,
+        parse::BinaryOperator::Remainder => BinaryOperator::Remainder,
+        parse::BinaryOperator::And => BinaryOperator::And,
+        parse::BinaryOperator::Or => BinaryOperator::Or,
+        parse::BinaryOperator::Xor => BinaryOperator::Xor,
+        parse::BinaryOperator::LeftShit => BinaryOperator::LeftShift,
+        parse::BinaryOperator::RightShift => BinaryOperator::RightShift,
+        parse::BinaryOperator::EqualTo => BinaryOperator::Equal,
+        parse::BinaryOperator::NotEqualTo => BinaryOperator::NotEqual,
+        parse::BinaryOperator::LessThan => BinaryOperator::LessThan,
+        parse::BinaryOperator::LessOrEqual => BinaryOperator::LessOrEqual,
+        parse::BinaryOperator::GreaterThan => BinaryOperator::GreaterThan,
+        parse::BinaryOperator::GreaterOrEqual => BinaryOperator::GreaterOrEqual,
         _ => return Err(TackeyError(format!("cannot convert binop"))),
     };
     Ok(op)

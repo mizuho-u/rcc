@@ -1,7 +1,58 @@
-use crate::{
-    ast::{self, Expression},
-    token::{self, Token},
-};
+use crate::token::{self, Token};
+
+#[derive(PartialEq, Debug)]
+pub enum Program {
+    Program(Function),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Function {
+    Function(Identifier, Statement),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Statement {
+    Return(Expression),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Expression {
+    Constant(i32),
+    Unary(UnaryOperator, Box<Expression>),
+    Binary(BinaryOperator, Box<Expression>, Box<Expression>),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum UnaryOperator {
+    Complement,
+    Negate,
+    Not,
+}
+
+#[derive(PartialEq, Debug)]
+pub enum BinaryOperator {
+    Subtract,
+    Add,
+    Multiply,
+    Divide,
+    Remainder,
+    And,
+    Or,
+    Xor,
+    LeftShit,
+    RightShift,
+    LogicalAnd,
+    LogicalOr,
+    EqualTo,
+    NotEqualTo,
+    LessThan,
+    LessOrEqual,
+    GreaterThan,
+    GreaterOrEqual,
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Identifier(pub String);
 
 #[derive(Debug)]
 pub struct ParseError(String);
@@ -20,7 +71,7 @@ impl From<String> for ParseError {
 
 impl std::error::Error for ParseError {}
 
-pub fn parse(tokens: &mut Vec<Token>) -> Result<ast::Program, ParseError> {
+pub fn parse(tokens: &mut Vec<Token>) -> Result<Program, ParseError> {
     let p = parse_program(tokens)?;
 
     if tokens.len() >= 1 {
@@ -30,12 +81,12 @@ pub fn parse(tokens: &mut Vec<Token>) -> Result<ast::Program, ParseError> {
     }
 }
 
-fn parse_program(tokens: &mut Vec<Token>) -> Result<ast::Program, ParseError> {
+fn parse_program(tokens: &mut Vec<Token>) -> Result<Program, ParseError> {
     let f = parse_function(tokens)?;
-    Ok(ast::Program::Program(f))
+    Ok(Program::Program(f))
 }
 
-fn parse_function(tokens: &mut Vec<Token>) -> Result<ast::Function, ParseError> {
+fn parse_function(tokens: &mut Vec<Token>) -> Result<Function, ParseError> {
     expect(tokens, Token::Int)?;
     let id = parse_identifier(tokens)?;
     expect(tokens, Token::OpenParen)?;
@@ -45,53 +96,44 @@ fn parse_function(tokens: &mut Vec<Token>) -> Result<ast::Function, ParseError> 
     let s = parse_statement(tokens)?;
     expect(tokens, Token::CloseBrace)?;
 
-    Ok(ast::Function::Function(id, s))
+    Ok(Function::Function(id, s))
 }
 
-fn parse_statement(tokens: &mut Vec<Token>) -> Result<ast::Statement, ParseError> {
+fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
     expect(tokens, Token::Return)?;
 
     let e = parse_exp(tokens, 0)?;
 
     expect(tokens, Token::Semicolon)?;
 
-    Ok(ast::Statement::Return(e))
+    Ok(Statement::Return(e))
 }
 
-fn parse_factor(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> {
+fn parse_factor(tokens: &mut Vec<Token>) -> Result<Expression, ParseError> {
     let next: &Token = peek(tokens);
 
     match *next {
         Token::Constant(n) => {
             consume(tokens);
-            Ok(ast::Expression::Constant(n))
+            Ok(Expression::Constant(n))
         }
         Token::BitwiseComplementOperator => {
             consume(tokens);
             let exp = parse_factor(tokens)?;
 
-            Ok(ast::Expression::Unary(
-                ast::UnaryOperator::Complement,
-                Box::new(exp),
-            ))
+            Ok(Expression::Unary(UnaryOperator::Complement, Box::new(exp)))
         }
         Token::NegationOperator => {
             consume(tokens);
             let exp = parse_factor(tokens)?;
 
-            Ok(ast::Expression::Unary(
-                ast::UnaryOperator::Negate,
-                Box::new(exp),
-            ))
+            Ok(Expression::Unary(UnaryOperator::Negate, Box::new(exp)))
         }
         Token::LogicalNotOperator => {
             consume(tokens);
             let exp = parse_factor(tokens)?;
 
-            Ok(ast::Expression::Unary(
-                ast::UnaryOperator::Not,
-                Box::new(exp),
-            ))
+            Ok(Expression::Unary(UnaryOperator::Not, Box::new(exp)))
         }
         // Token::DecrementOperator => todo!(),
         Token::OpenParen => {
@@ -104,7 +146,7 @@ fn parse_factor(tokens: &mut Vec<Token>) -> Result<ast::Expression, ParseError> 
     }
 }
 
-fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<ast::Expression, ParseError> {
+fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression, ParseError> {
     let mut left = parse_factor(tokens)?;
 
     loop {
@@ -144,30 +186,26 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<ast::Expres
     Ok(left)
 }
 
-fn parse_binop(
-    op: Token,
-    left: Expression,
-    right: Expression,
-) -> Result<ast::Expression, ParseError> {
+fn parse_binop(op: Token, left: Expression, right: Expression) -> Result<Expression, ParseError> {
     let op = match op {
-        Token::NegationOperator => Ok(ast::BinaryOperator::Subtract),
-        Token::AdditionOperator => Ok(ast::BinaryOperator::Add),
-        Token::DivisionOperator => Ok(ast::BinaryOperator::Divide),
-        Token::MultiplicationOperator => Ok(ast::BinaryOperator::Multiply),
-        Token::RemainderOperator => Ok(ast::BinaryOperator::Remainder),
-        Token::AndOperator => Ok(ast::BinaryOperator::And),
-        Token::OrOperator => Ok(ast::BinaryOperator::Or),
-        Token::XorOperator => Ok(ast::BinaryOperator::Xor),
-        Token::LeftShiftOperator => Ok(ast::BinaryOperator::LeftShit),
-        Token::RightShiftOperator => Ok(ast::BinaryOperator::RightShift),
-        Token::LogicalAndOperator => Ok(ast::BinaryOperator::LogicalAnd),
-        Token::LogicalOrOperator => Ok(ast::BinaryOperator::LogicalOr),
-        Token::EqualToOperator => Ok(ast::BinaryOperator::EqualTo),
-        Token::NotEqualToOperator => Ok(ast::BinaryOperator::NotEqualTo),
-        Token::LessThanOperator => Ok(ast::BinaryOperator::LessThan),
-        Token::LessOrEqualOperator => Ok(ast::BinaryOperator::LessOrEqual),
-        Token::GreaterThanOperator => Ok(ast::BinaryOperator::GreaterThan),
-        Token::GreaterOrEqualOperator => Ok(ast::BinaryOperator::GreaterOrEqual),
+        Token::NegationOperator => Ok(BinaryOperator::Subtract),
+        Token::AdditionOperator => Ok(BinaryOperator::Add),
+        Token::DivisionOperator => Ok(BinaryOperator::Divide),
+        Token::MultiplicationOperator => Ok(BinaryOperator::Multiply),
+        Token::RemainderOperator => Ok(BinaryOperator::Remainder),
+        Token::AndOperator => Ok(BinaryOperator::And),
+        Token::OrOperator => Ok(BinaryOperator::Or),
+        Token::XorOperator => Ok(BinaryOperator::Xor),
+        Token::LeftShiftOperator => Ok(BinaryOperator::LeftShit),
+        Token::RightShiftOperator => Ok(BinaryOperator::RightShift),
+        Token::LogicalAndOperator => Ok(BinaryOperator::LogicalAnd),
+        Token::LogicalOrOperator => Ok(BinaryOperator::LogicalOr),
+        Token::EqualToOperator => Ok(BinaryOperator::EqualTo),
+        Token::NotEqualToOperator => Ok(BinaryOperator::NotEqualTo),
+        Token::LessThanOperator => Ok(BinaryOperator::LessThan),
+        Token::LessOrEqualOperator => Ok(BinaryOperator::LessOrEqual),
+        Token::GreaterThanOperator => Ok(BinaryOperator::GreaterThan),
+        Token::GreaterOrEqualOperator => Ok(BinaryOperator::GreaterOrEqual),
         _ => Err(ParseError(format!("not binop"))),
     }?;
 
@@ -193,11 +231,11 @@ fn binop_precedence(token: &Token) -> i32 {
     }
 }
 
-fn parse_identifier(tokens: &mut Vec<Token>) -> Result<ast::Identifier, ParseError> {
+fn parse_identifier(tokens: &mut Vec<Token>) -> Result<Identifier, ParseError> {
     let t = expect_fn(tokens, |t| matches!(t, Token::Identifier(_)))?;
 
     if let Token::Identifier(s) = t {
-        return Ok(ast::Identifier(s));
+        return Ok(Identifier(s));
     }
 
     Err(ParseError(format!("Invalid Identifier {:?}", t)))
@@ -235,12 +273,9 @@ fn consume(tokens: &mut Vec<Token>) -> Token {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::BinaryOperator;
-    use crate::ast::Expression;
-    use crate::ast::Identifier;
-    use crate::ast::UnaryOperator;
+    use super::*;
     use crate::parse::parse;
-    use crate::{ast, token};
+    use crate::token;
 
     #[test]
     fn valid_parse() {
@@ -248,9 +283,9 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Constant(1))
+                Statement::Return(Expression::Constant(1))
             ))
         )
     }
@@ -261,13 +296,13 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Unary(
-                    ast::UnaryOperator::Complement,
-                    Box::new(ast::Expression::Unary(
-                        ast::UnaryOperator::Negate,
-                        Box::new(ast::Expression::Constant(1))
+                Statement::Return(Expression::Unary(
+                    UnaryOperator::Complement,
+                    Box::new(Expression::Unary(
+                        UnaryOperator::Negate,
+                        Box::new(Expression::Constant(1))
                     ))
                 ))
             ))
@@ -280,12 +315,12 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Binary(
-                    ast::BinaryOperator::Add,
-                    Box::new(ast::Expression::Constant(1)),
-                    Box::new(ast::Expression::Constant(2)),
+                Statement::Return(Expression::Binary(
+                    BinaryOperator::Add,
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Constant(2)),
                 ))
             ))
         )
@@ -297,16 +332,16 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Binary(
-                    ast::BinaryOperator::Add,
-                    Box::new(ast::Expression::Binary(
-                        ast::BinaryOperator::Add,
-                        Box::new(ast::Expression::Constant(1)),
-                        Box::new(ast::Expression::Constant(2)),
+                Statement::Return(Expression::Binary(
+                    BinaryOperator::Add,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Constant(1)),
+                        Box::new(Expression::Constant(2)),
                     )),
-                    Box::new(ast::Expression::Constant(3)),
+                    Box::new(Expression::Constant(3)),
                 ))
             ))
         )
@@ -318,15 +353,15 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Binary(
-                    ast::BinaryOperator::Add,
-                    Box::new(ast::Expression::Constant(1)),
-                    Box::new(ast::Expression::Binary(
-                        ast::BinaryOperator::Add,
-                        Box::new(ast::Expression::Constant(2)),
-                        Box::new(ast::Expression::Constant(3)),
+                Statement::Return(Expression::Binary(
+                    BinaryOperator::Add,
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Constant(2)),
+                        Box::new(Expression::Constant(3)),
                     )),
                 ))
             ))
@@ -339,15 +374,15 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Binary(
-                    ast::BinaryOperator::Add,
-                    Box::new(ast::Expression::Constant(1)),
-                    Box::new(ast::Expression::Binary(
-                        ast::BinaryOperator::Multiply,
-                        Box::new(ast::Expression::Constant(2)),
-                        Box::new(ast::Expression::Constant(3)),
+                Statement::Return(Expression::Binary(
+                    BinaryOperator::Add,
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Multiply,
+                        Box::new(Expression::Constant(2)),
+                        Box::new(Expression::Constant(3)),
                     )),
                 ))
             ))
@@ -360,16 +395,16 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Binary(
-                    ast::BinaryOperator::Multiply,
-                    Box::new(ast::Expression::Binary(
-                        ast::BinaryOperator::Add,
-                        Box::new(ast::Expression::Constant(1)),
-                        Box::new(ast::Expression::Constant(2)),
+                Statement::Return(Expression::Binary(
+                    BinaryOperator::Multiply,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Constant(1)),
+                        Box::new(Expression::Constant(2)),
                     )),
-                    Box::new(ast::Expression::Constant(3)),
+                    Box::new(Expression::Constant(3)),
                 ))
             ))
         )
@@ -381,21 +416,21 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Binary(
-                    ast::BinaryOperator::Multiply,
-                    Box::new(ast::Expression::Binary(
-                        ast::BinaryOperator::Add,
-                        Box::new(ast::Expression::Unary(
-                            ast::UnaryOperator::Negate,
-                            Box::new(ast::Expression::Constant(1))
+                Statement::Return(Expression::Binary(
+                    BinaryOperator::Multiply,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Unary(
+                            UnaryOperator::Negate,
+                            Box::new(Expression::Constant(1))
                         )),
-                        Box::new(ast::Expression::Constant(2)),
+                        Box::new(Expression::Constant(2)),
                     )),
-                    Box::new(ast::Expression::Unary(
-                        ast::UnaryOperator::Complement,
-                        Box::new(ast::Expression::Constant(3))
+                    Box::new(Expression::Unary(
+                        UnaryOperator::Complement,
+                        Box::new(Expression::Constant(3))
                     )),
                 ))
             ))
@@ -408,12 +443,12 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(ast::Expression::Binary(
-                    ast::BinaryOperator::And,
-                    Box::new(ast::Expression::Constant(3)),
-                    Box::new(ast::Expression::Constant(1)),
+                Statement::Return(Expression::Binary(
+                    BinaryOperator::And,
+                    Box::new(Expression::Constant(3)),
+                    Box::new(Expression::Constant(1)),
                 ))
             ))
         )
@@ -426,9 +461,9 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(Expression::Binary(
+                Statement::Return(Expression::Binary(
                     BinaryOperator::Or,
                     Box::new(Expression::Constant(1)),
                     Box::new(Expression::Binary(
@@ -460,9 +495,9 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(Expression::Binary(
+                Statement::Return(Expression::Binary(
                     BinaryOperator::Xor,
                     Box::new(Expression::Binary(
                         BinaryOperator::LeftShit,
@@ -490,9 +525,9 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(Expression::Binary(
+                Statement::Return(Expression::Binary(
                     BinaryOperator::LogicalOr,
                     Box::new(Expression::Binary(
                         BinaryOperator::LogicalAnd,
@@ -517,9 +552,9 @@ mod tests {
         let result = parse(&mut result).unwrap();
         assert_eq!(
             result,
-            ast::Program::Program(ast::Function::Function(
+            Program::Program(Function::Function(
                 Identifier("main".to_string()),
-                ast::Statement::Return(Expression::Binary(
+                Statement::Return(Expression::Binary(
                     BinaryOperator::NotEqualTo,
                     Box::new(Expression::Binary(
                         BinaryOperator::EqualTo,
