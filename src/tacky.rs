@@ -1,4 +1,4 @@
-use crate::parse::{self, BlockItem, Expression};
+use crate::parse::{self, BlockItem};
 use std::cell::RefCell;
 
 #[derive(PartialEq, Debug)]
