@@ -111,7 +111,11 @@ fn parse_function_definition(tokens: &mut Vec<Token>) -> Result<Function, ParseE
 
     let mut body = Vec::new();
 
-    while *peek(tokens) != Token::CloseBrace {
+    loop {
+        let next = peek(tokens).expect("peek failed, no token left.");
+        if *next == Token::CloseBrace {
+            break;
+        }
         body.push(parse_block_item(tokens)?);
     }
 
@@ -121,7 +125,7 @@ fn parse_function_definition(tokens: &mut Vec<Token>) -> Result<Function, ParseE
 }
 
 fn parse_block_item(tokens: &mut Vec<Token>) -> Result<BlockItem, ParseError> {
-    let next = peek(tokens);
+    let next = peek(tokens).expect("peek failed, no token left.");
 
     match next {
         Token::Int => Ok(BlockItem::Declaration(parse_declaration(tokens)?)),
@@ -133,7 +137,9 @@ fn parse_declaration(tokens: &mut Vec<Token>) -> Result<Declaration, ParseError>
     let _type = expect(tokens, Token::Int)?;
     let id = parse_identifier(tokens)?;
 
-    if *peek(tokens) == Token::Semicolon {
+    let next = peek(tokens).expect("peek failed, no token left.");
+
+    if *next == Token::Semicolon {
         consume(tokens);
         return Ok(Declaration::Declaration(id, None));
     }
@@ -146,7 +152,9 @@ fn parse_declaration(tokens: &mut Vec<Token>) -> Result<Declaration, ParseError>
 }
 
 fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
-    match *peek(tokens) {
+    let next = peek(tokens).expect("peek failed, no token left.");
+
+    match next {
         Token::Semicolon => {
             consume(tokens);
             Ok(Statement::Null)
@@ -205,7 +213,7 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
     let mut left = parse_factor(tokens)?;
 
     loop {
-        let next = peek(tokens);
+        let next = peek(tokens).expect("peek failed, no token left.");
 
         if precedence(next) < min_prededence {
             break;
@@ -327,8 +335,12 @@ fn expect_fn(tokens: &mut Vec<Token>, cb: fn(&Token) -> bool) -> Result<Token, P
     Ok(head)
 }
 
-fn peek(tokens: &Vec<Token>) -> &Token {
-    &tokens[0]
+fn peek(tokens: &Vec<Token>) -> Option<&Token> {
+    if tokens.len() == 0 {
+        None
+    } else {
+        Some(&tokens[0])
+    }
 }
 
 fn consume(tokens: &mut Vec<Token>) -> Token {
