@@ -2,7 +2,7 @@ use rc::asm::{
     convert, BinaryOperator, Function, Identifier, Instruction, JumpCondition, Operand, Program,
     Register, UnaryOperator,
 };
-use rc::parse::parse;
+use rc::parse::{parse, validate};
 use rc::tacky::convert as tconvert;
 use rc::token;
 
@@ -440,7 +440,10 @@ fn relational_operator() {
 
 fn tokenize_to_convert(p: &str) -> Program {
     let mut result = token::tokenize(p.into()).unwrap();
+
     let result = parse(&mut result).unwrap();
+    let result = validate(result).unwrap();
+
     let result = tconvert(result).unwrap();
 
     convert(result).unwrap()
