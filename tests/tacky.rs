@@ -1,4 +1,4 @@
-use rc::parse::parse;
+use rc::parse::{parse, validate};
 use rc::tacky::{self, convert, BinaryOperator, Identifier, Instruction, UnaryOperator, Val};
 use rc::token;
 
@@ -228,5 +228,88 @@ fn relational_operator() {
                 tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.6".to_string()))),
             ]
         ))
+    )
+}
+
+#[test]
+fn local_variables() {
+    let mut result =
+        token::tokenize(" int main(void) { int b; int a = 10 + 1; b = a * 2; return b; } ".into())
+            .unwrap();
+    let result = parse(&mut result).unwrap();
+    let result = validate(result).unwrap();
+    let result = convert(result).unwrap();
+
+    assert_eq!(
+        result,
+        tacky::Program::Program(tacky::Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Constant(10),
+                    Val::Constant(1),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Val::Var(Identifier("var.a.2".to_string()))
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Multiply,
+                    Val::Var(Identifier("var.a.2".to_string())),
+                    Val::Constant(2),
+                    Val::Var(Identifier("tmp.2".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.2".to_string())),
+                    Val::Var(Identifier("var.b.1".to_string()))
+                ),
+                tacky::Instruction::Return(tacky::Val::Var(Identifier("var.b.1".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_with_no_return_statement() {
+    let mut result =
+        token::tokenize(" int main(void) { int b; int a = 10 + 1; b = a * 2; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    let result = validate(result).unwrap();
+    let result = convert(result).unwrap();
+
+    assert_eq!(
+        result,
+        tacky::Program::Program(tacky::Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Constant(10),
+                    Val::Constant(1),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Val::Var(Identifier("var.a.2".to_string()))
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Multiply,
+                    Val::Var(Identifier("var.a.2".to_string())),
+                    Val::Constant(2),
+                    Val::Var(Identifier("tmp.2".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.2".to_string())),
+                    Val::Var(Identifier("var.b.1".to_string()))
+                ),
+                tacky::Instruction::Return(tacky::Val::Constant(0)),
+            ]
+        )),
+        "{:#?}",
+        result
     )
 }

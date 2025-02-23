@@ -1,4 +1,4 @@
-use crate::parse;
+use crate::parse::{self, BlockItem, Expression};
 use std::cell::RefCell;
 
 #[derive(PartialEq, Debug)]
@@ -87,13 +87,63 @@ fn convert_program(p: parse::Program) -> Result<Program, TackeyError> {
 }
 
 fn convert_function(f: parse::Function) -> Result<Function, TackeyError> {
-    let parse::Function::Function(id, stmt) = f;
+    let parse::Function::Function(id, stmts) = f;
 
-    Err(TackeyError("not implemented".to_string()))
-    // Ok(Function::Function(
-    //     Identifier(id.0),
-    //     convert_statement(stmt)?,
-    // ))
+    let mut insts = Vec::new();
+
+    for b in stmts {
+        insts.append(&mut convert_block_item(b)?);
+    }
+
+    // これはok
+    // int main(void) {
+    //     int a = 4;
+    //     a = 0;
+    // }
+    //
+    // これもok
+    // #include <stdio.h>
+    // int foo(void) {
+    //     printf("I'm living on the edge, baby!");
+    //     // no return statement
+    // }
+
+    // int main(void) {
+    //     foo();
+    //     return 0;
+    // }
+    //
+    // らしい。
+    // ので、その場合のコールスタックの復帰とかその辺の処理をするためReturnを入れる。
+    //
+    // @todo 最終的に全部に入れて最適化で取り除く感じにしたい
+    if let Some(Instruction::Return(_)) = insts.last() {
+    } else {
+        insts.push(Instruction::Return(Val::Constant(0)));
+    }
+
+    Ok(Function::Function(Identifier(id.0), insts))
+}
+
+fn convert_block_item(b: BlockItem) -> Result<Vec<Instruction>, TackeyError> {
+    match b {
+        BlockItem::Statement(s) => convert_statement(s),
+        BlockItem::Declaration(d) => convert_declaration(d),
+    }
+}
+
+fn convert_declaration(d: parse::Declaration) -> Result<Vec<Instruction>, TackeyError> {
+    let mut instructions = Vec::new();
+
+    match d {
+        parse::Declaration::Declaration(id, Some(exp)) => {
+            let r = convert_exp(exp, &mut instructions)?;
+            instructions.push(Instruction::Copy(r, Val::Var(Identifier(id.0))));
+        }
+        _ => {}
+    };
+
+    Ok(instructions)
 }
 
 fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyError> {
@@ -104,8 +154,10 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             let val = convert_exp(e, &mut instructions)?;
             instructions.push(Instruction::Return(val));
         }
-        parse::Statement::Expression(expression) => todo!(),
-        parse::Statement::Null => todo!(),
+        parse::Statement::Expression(e) => {
+            convert_exp(e, &mut instructions)?;
+        }
+        parse::Statement::Null => {}
     }
 
     Ok(instructions)
@@ -189,8 +241,14 @@ fn convert_exp(
                 Ok(dst)
             }
         },
-        parse::Expression::Var(identifier) => todo!(),
-        parse::Expression::Assignment(expression, expression1) => todo!(),
+        parse::Expression::Var(id) => Ok(Val::Var(Identifier(id.0))),
+        parse::Expression::Assignment(e1, e2) => {
+            let l = convert_exp(*e1, instructions)?;
+            let r = convert_exp(*e2, instructions)?;
+            instructions.push(Instruction::Copy(r, l.clone()));
+
+            Ok(l)
+        }
     }
 }
 
