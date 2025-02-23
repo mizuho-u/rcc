@@ -8,10 +8,7 @@ use rc::token;
 
 #[test]
 fn immediate() {
-    let mut result = token::tokenize(" int main(void) { return 1; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 1; } ");
 
     assert_eq!(
         result,
@@ -31,10 +28,7 @@ fn immediate() {
 
 #[test]
 fn allocate_stack() {
-    let mut result = token::tokenize(" int main(void) { return -(~(1)); } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return -(~(1)); } ");
 
     assert_eq!(
         result,
@@ -68,10 +62,7 @@ fn allocate_stack() {
 
 #[test]
 fn binop1() {
-    let mut result = token::tokenize(" int main(void) { return 1+2; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 1+2; } ");
 
     assert_eq!(
         result,
@@ -100,10 +91,7 @@ fn binop1() {
 
 #[test]
 fn binop2() {
-    let mut result = token::tokenize(" int main(void) { return 1*2; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 1*2; } ");
 
     assert_eq!(
         result,
@@ -140,10 +128,7 @@ fn binop2() {
 
 #[test]
 fn binop3() {
-    let mut result = token::tokenize(" int main(void) { return 1/2; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 1/2; } ");
 
     assert_eq!(
         result,
@@ -177,10 +162,7 @@ fn binop3() {
 
 #[test]
 fn binop4() {
-    let mut result = token::tokenize(" int main(void) { return 2 * (3 + 4); } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 2 * (3 + 4); } ");
 
     assert_eq!(
         result,
@@ -226,11 +208,7 @@ fn binop4() {
 
 #[test]
 fn binop5() {
-    let mut result =
-        token::tokenize(" int main(void) { return 1 | 2 ^ 3 & 4 << 5 >> 6; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 1 | 2 ^ 3 & 4 << 5 >> 6; } ");
 
     assert_eq!(
         result,
@@ -312,10 +290,7 @@ fn binop5() {
 
 #[test]
 fn logical_operator() {
-    let mut result = token::tokenize(" int main(void) { return !1 && 2 || 3; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return !1 && 2 || 3; } ");
 
     assert_eq!(
         result,
@@ -390,12 +365,7 @@ fn logical_operator() {
 #[test]
 fn relational_operator() {
     // (1 == 2) != ((((3 < 4) > 5) <= 6) >= 7)
-    let mut result =
-        token::tokenize(" int main(void) { return 1 == 2 != 3 < 4 > 5 <= 6 >= 7; } ".into())
-            .unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = tconvert(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 1 == 2 != 3 < 4 > 5 <= 6 >= 7; } ");
 
     assert_eq!(
         result,
@@ -466,4 +436,12 @@ fn relational_operator() {
         }),
         "{result:#?}"
     );
+}
+
+fn tokenize_to_convert(p: &str) -> Program {
+    let mut result = token::tokenize(p.into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    let result = tconvert(result).unwrap();
+
+    convert(result).unwrap()
 }

@@ -4,10 +4,7 @@ use rc::token;
 
 #[test]
 fn valid_tacky() {
-    let mut result = token::tokenize(" int main(void) { return 1; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = convert(result).unwrap();
-
+    let result = tokenize_to_convert(" int main(void) { return 1; } ");
     assert_eq!(
         result,
         tacky::Program::Program(tacky::Function::Function(
@@ -19,9 +16,7 @@ fn valid_tacky() {
 
 #[test]
 fn valid_tacky_unary() {
-    let mut result = token::tokenize(" int main(void) { return ~(-1); } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return ~(-1); } ");
 
     assert_eq!(
         result,
@@ -46,9 +41,7 @@ fn valid_tacky_unary() {
 
 #[test]
 fn valid_tacky_binary() {
-    let mut result = token::tokenize(" int main(void) { return (1+2)*3-4/5; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return (1+2)*3-4/5; } ");
 
     assert_eq!(
         result,
@@ -87,10 +80,7 @@ fn valid_tacky_binary() {
 
 #[test]
 fn bitwise_binary_operator() {
-    let mut result =
-        token::tokenize(" int main(void) { return 1 | 2 ^ 3 & 4 << 5 >> 6; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 1 | 2 ^ 3 & 4 << 5 >> 6; } ");
 
     assert_eq!(
         result,
@@ -135,9 +125,7 @@ fn bitwise_binary_operator() {
 
 #[test]
 fn logical_operator() {
-    let mut result = token::tokenize(" int main(void) { return !1 && 2 || 3; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return !1 && 2 || 3; } ");
 
     assert_eq!(
         result,
@@ -177,12 +165,7 @@ fn logical_operator() {
 
 #[test]
 fn relational_operator() {
-    // (1 == 2) != ((((3 < 4) > 5) <= 6) >= 7)
-    let mut result =
-        token::tokenize(" int main(void) { return 1 == 2 != 3 < 4 > 5 <= 6 >= 7; } ".into())
-            .unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { return 1 == 2 != 3 < 4 > 5 <= 6 >= 7; } ");
 
     assert_eq!(
         result,
@@ -233,12 +216,8 @@ fn relational_operator() {
 
 #[test]
 fn local_variables() {
-    let mut result =
-        token::tokenize(" int main(void) { int b; int a = 10 + 1; b = a * 2; return b; } ".into())
-            .unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = validate(result).unwrap();
-    let result = convert(result).unwrap();
+    let result =
+        tokenize_to_convert(" int main(void) { int b; int a = 10 + 1; b = a * 2; return b; } ");
 
     assert_eq!(
         result,
@@ -275,11 +254,7 @@ fn local_variables() {
 
 #[test]
 fn function_with_no_return_statement() {
-    let mut result =
-        token::tokenize(" int main(void) { int b; int a = 10 + 1; b = a * 2; } ".into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = validate(result).unwrap();
-    let result = convert(result).unwrap();
+    let result = tokenize_to_convert(" int main(void) { int b; int a = 10 + 1; b = a * 2; } ");
 
     assert_eq!(
         result,
@@ -312,4 +287,12 @@ fn function_with_no_return_statement() {
         "{:#?}",
         result
     )
+}
+
+fn tokenize_to_convert(p: &str) -> tacky::Program {
+    let mut result = token::tokenize(p.into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    let result = validate(result).unwrap();
+
+    convert(result).unwrap()
 }
