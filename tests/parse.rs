@@ -349,6 +349,7 @@ fn parse_assignment() {
                     Some(Expression::Constant(2))
                 )),
                 BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::Simple,
                     Box::new(Expression::Var(Identifier("a".to_string()))),
                     Box::new(Expression::Var(Identifier("b".to_string()))),
                 ))),
@@ -486,6 +487,88 @@ fn increment4() {
                         Box::new(Expression::Var(Identifier("a".to_string())))
                     ))
                 ))),
+            ]
+        ))
+    )
+}
+
+#[test]
+fn compound() {
+    let mut result = token::tokenize(
+        " int main(void) { int a = 1; int b = 2; int c = 3; a += 10; a -= 1; a *= a; a /= b; a %= c; a &= 1; a |= a; a ^= b; a <<= c; a >>= 1; return a; } ".into(),
+    )
+    .unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("b".to_string()),
+                    Some(Expression::Constant(2))
+                )),
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("c".to_string()),
+                    Some(Expression::Constant(3))
+                )),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::Addition,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Constant(10)),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::Subtract,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Constant(1)),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::Multiplication,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::Division,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Var(Identifier("b".to_string()))),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::Remainder,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Var(Identifier("c".to_string()))),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::And,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Constant(1)),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::Or,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::Xor,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Var(Identifier("b".to_string()))),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::LeftShift,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Var(Identifier("c".to_string()))),
+                ))),
+                BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                    AssignmentOperator::RightShift,
+                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                    Box::new(Expression::Constant(1)),
+                ))),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                )))),
             ]
         ))
     )

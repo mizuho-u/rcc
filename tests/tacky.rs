@@ -345,6 +345,37 @@ fn increment_decrement() {
     )
 }
 
+#[test]
+fn compound_assignment() {
+    let result = tokenize_to_convert(" int main(void) { int a = 0; a += 2; return a; } ");
+
+    assert_eq!(
+        result,
+        tacky::Program::Program(tacky::Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(2),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
 fn tokenize_to_convert(p: &str) -> tacky::Program {
     let mut result = token::tokenize(p.into()).unwrap();
     let result = parse(&mut result).unwrap();

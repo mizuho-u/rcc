@@ -36,6 +36,16 @@ pub enum Token {
     GreaterOrEqualOperator,
     AssignmentOperator,
     // @todo typedef(GLR parser)
+    CompoundAssignmentAdditionOperator,
+    CompoundAssignmentSubtractOperator,
+    CompoundAssignmentMultiplicationOperator,
+    CompoundAssignmentDivisionOperator,
+    CompoundAssignmentRemainderOperator,
+    CompoundAssignmentAndOperator,
+    CompoundAssignmentOrOperator,
+    CompoundAssignmentXorOperator,
+    CompoundAssignmentLeftShiftOperator,
+    CompoundAssignmentRightShiftOperator,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -53,6 +63,23 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
     }
 
     let s = s.trim();
+
+    if let Some(t) = find_token(s, r"^(\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<=|>>=)", |c| match c {
+        "+=" => Some(Token::CompoundAssignmentAdditionOperator),
+        "-=" => Some(Token::CompoundAssignmentSubtractOperator),
+        "*=" => Some(Token::CompoundAssignmentMultiplicationOperator),
+        "/=" => Some(Token::CompoundAssignmentDivisionOperator),
+        "%=" => Some(Token::CompoundAssignmentRemainderOperator),
+        "&=" => Some(Token::CompoundAssignmentAndOperator),
+        "|=" => Some(Token::CompoundAssignmentOrOperator),
+        "^=" => Some(Token::CompoundAssignmentXorOperator),
+        "<<=" => Some(Token::CompoundAssignmentLeftShiftOperator),
+        ">>=" => Some(Token::CompoundAssignmentRightShiftOperator),
+        _ => None,
+    }) {
+        ts.push(t.0);
+        return _tokenize(&s[t.1..], ts);
+    }
 
     if let Some(t) = find_token(s, r"^(--|\+\+|<<|>>|&&|\|\||==|!=|<=|>=)", |c| match c {
         "--" => Some(Token::DecrementOperator),

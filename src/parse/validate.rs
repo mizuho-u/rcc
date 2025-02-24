@@ -86,8 +86,9 @@ fn resolve_exp(
                 Err(SemanticError("Undeclared variable".to_string()))
             }
         }
-        Expression::Assignment(e1, e2) => match *e1 {
+        Expression::Assignment(op, e1, e2) => match *e1 {
             Expression::Var(_) => Ok(Expression::Assignment(
+                op,
                 Box::new(resolve_exp(*e1, varmap)?),
                 Box::new(resolve_exp(*e2, varmap)?),
             )),

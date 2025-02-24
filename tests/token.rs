@@ -188,6 +188,25 @@ fn assignment() {
 }
 
 #[test]
+fn compound_assignment() {
+    let result = token::tokenize(" += -= *= /= %= &= |= ^= <<= >>= ".into()).unwrap();
+    assert_eq!(
+        result,
+        vec![
+            Token::CompoundAssignmentAdditionOperator,
+            Token::CompoundAssignmentSubtractOperator,
+            Token::CompoundAssignmentMultiplicationOperator,
+            Token::CompoundAssignmentDivisionOperator,
+            Token::CompoundAssignmentRemainderOperator,
+            Token::CompoundAssignmentAndOperator,
+            Token::CompoundAssignmentOrOperator,
+            Token::CompoundAssignmentXorOperator,
+            Token::CompoundAssignmentLeftShiftOperator,
+            Token::CompoundAssignmentRightShiftOperator,
+        ]
+    )
+}
+#[test]
 #[should_panic]
 fn invalid_token() {
     token::tokenize(" 1foo ".into()).unwrap();

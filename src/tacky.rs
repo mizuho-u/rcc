@@ -1,4 +1,4 @@
-use crate::parse::{self, BlockItem};
+use crate::parse::{self, AssignmentOperator, BlockItem, Expression};
 use std::cell::RefCell;
 
 #[derive(PartialEq, Debug)]
@@ -299,14 +299,49 @@ fn convert_exp(
             }
         },
         parse::Expression::Var(id) => Ok(Val::Var(Identifier(id.0))),
-        parse::Expression::Assignment(e1, e2) => {
-            let l = convert_exp(*e1, instructions)?;
-            let r = convert_exp(*e2, instructions)?;
-            instructions.push(Instruction::Copy(r, l.clone()));
-
-            Ok(l)
+        parse::Expression::Assignment(op, e1, e2) => {
+            let v = convert_assignment(op, *e1, *e2, instructions)?;
+            Ok(v)
         }
     }
+}
+
+fn convert_assignment(
+    op: AssignmentOperator,
+    lvalue: Expression,
+    rvalue: Expression,
+    instructions: &mut Vec<Instruction>,
+) -> Result<Val, TackeyError> {
+    let l = convert_exp(lvalue.clone(), instructions)?;
+
+    let binop = match op {
+        AssignmentOperator::Simple => {
+            let r = convert_exp(rvalue, instructions)?;
+
+            instructions.push(Instruction::Copy(r, l.clone()));
+
+            return Ok(l);
+        }
+        AssignmentOperator::Addition => parse::BinaryOperator::Add,
+        AssignmentOperator::Subtract => parse::BinaryOperator::Subtract,
+        AssignmentOperator::Multiplication => parse::BinaryOperator::Multiply,
+        AssignmentOperator::Division => parse::BinaryOperator::Divide,
+        AssignmentOperator::Remainder => parse::BinaryOperator::Remainder,
+        AssignmentOperator::And => parse::BinaryOperator::And,
+        AssignmentOperator::Or => parse::BinaryOperator::Or,
+        AssignmentOperator::Xor => parse::BinaryOperator::Xor,
+        AssignmentOperator::LeftShift => parse::BinaryOperator::LeftShit,
+        AssignmentOperator::RightShift => parse::BinaryOperator::RightShift,
+    };
+
+    let dst = convert_exp(
+        parse::Expression::Binary(binop, Box::new(lvalue), Box::new(rvalue)),
+        instructions,
+    )?;
+
+    instructions.push(Instruction::Copy(dst, l.clone()));
+
+    Ok(l)
 }
 
 fn convert_binop(op: &parse::BinaryOperator) -> Result<BinaryOperator, TackeyError> {

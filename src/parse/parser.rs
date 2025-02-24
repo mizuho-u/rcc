@@ -28,16 +28,31 @@ pub enum Declaration {
     Declaration(Identifier, Option<Expression>),
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum Expression {
     Var(Identifier),
     Constant(i32),
     Unary(UnaryOperator, Box<Expression>),
     Binary(BinaryOperator, Box<Expression>, Box<Expression>),
-    Assignment(Box<Expression>, Box<Expression>),
+    Assignment(AssignmentOperator, Box<Expression>, Box<Expression>),
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
+pub enum AssignmentOperator {
+    Simple,
+    Addition,
+    Subtract,
+    Multiplication,
+    Division,
+    Remainder,
+    And,
+    Or,
+    Xor,
+    LeftShift,
+    RightShift,
+}
+
+#[derive(PartialEq, Debug, Clone)]
 pub enum UnaryOperator {
     Complement,
     Negate,
@@ -48,7 +63,7 @@ pub enum UnaryOperator {
     DecrementPostfix,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum BinaryOperator {
     Subtract,
     Add,
@@ -70,7 +85,7 @@ pub enum BinaryOperator {
     GreaterOrEqual,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Identifier(pub String);
 
 #[derive(Debug)]
@@ -248,12 +263,12 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
             break;
         }
 
-        if *next == Token::AssignmentOperator {
+        if let Some(aop) = peek_assignment_operator(tokens) {
             let op = consume(tokens);
 
             let right = parse_exp(tokens, precedence(&op))?;
 
-            left = Expression::Assignment(Box::new(left), Box::new(right));
+            left = Expression::Assignment(aop, Box::new(left), Box::new(right));
         } else {
             match next {
                 Token::NegationOperator
@@ -284,6 +299,27 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
     }
 
     Ok(left)
+}
+
+fn peek_assignment_operator(tokens: &Vec<Token>) -> Option<AssignmentOperator> {
+    let op = peek(tokens).expect("peek failed, no token left.");
+
+    let aop = match *op {
+        Token::AssignmentOperator => AssignmentOperator::Simple,
+        Token::CompoundAssignmentAdditionOperator => AssignmentOperator::Addition,
+        Token::CompoundAssignmentSubtractOperator => AssignmentOperator::Subtract,
+        Token::CompoundAssignmentMultiplicationOperator => AssignmentOperator::Multiplication,
+        Token::CompoundAssignmentDivisionOperator => AssignmentOperator::Division,
+        Token::CompoundAssignmentRemainderOperator => AssignmentOperator::Remainder,
+        Token::CompoundAssignmentAndOperator => AssignmentOperator::And,
+        Token::CompoundAssignmentOrOperator => AssignmentOperator::Or,
+        Token::CompoundAssignmentXorOperator => AssignmentOperator::Xor,
+        Token::CompoundAssignmentLeftShiftOperator => AssignmentOperator::LeftShift,
+        Token::CompoundAssignmentRightShiftOperator => AssignmentOperator::RightShift,
+        _ => return None,
+    };
+
+    Some(aop)
 }
 
 fn parse_binop(op: Token, left: Expression, right: Expression) -> Result<Expression, ParseError> {
@@ -327,7 +363,17 @@ fn precedence(token: &Token) -> i32 {
         Token::OrOperator => 30,
         Token::LogicalAndOperator => 29,
         Token::LogicalOrOperator => 28,
-        Token::AssignmentOperator => 1,
+        Token::AssignmentOperator
+        | Token::CompoundAssignmentAdditionOperator
+        | Token::CompoundAssignmentSubtractOperator
+        | Token::CompoundAssignmentMultiplicationOperator
+        | Token::CompoundAssignmentDivisionOperator
+        | Token::CompoundAssignmentRemainderOperator
+        | Token::CompoundAssignmentAndOperator
+        | Token::CompoundAssignmentOrOperator
+        | Token::CompoundAssignmentXorOperator
+        | Token::CompoundAssignmentLeftShiftOperator
+        | Token::CompoundAssignmentRightShiftOperator => 1,
         _ => 0,
     }
 }
