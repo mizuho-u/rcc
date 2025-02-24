@@ -1,7 +1,9 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use super::{BlockItem, Declaration, Expression, Function, Identifier, Program, Statement};
+use super::{
+    BlockItem, Declaration, Expression, Function, Identifier, Program, Statement, UnaryOperator,
+};
 
 #[derive(Debug)]
 pub struct SemanticError(String);
@@ -91,6 +93,27 @@ fn resolve_exp(
             )),
             _ => Err(SemanticError("Invalid lvalue".to_string())),
         },
+        Expression::Unary(op, e)
+            if op == UnaryOperator::IncrementPrefix
+                || op == UnaryOperator::IncrementPostfix
+                || op == UnaryOperator::DecrementPrefix
+                || op == UnaryOperator::DecrementPostfix =>
+        {
+            // 識別子のみに適用できる
+            match *e {
+                Expression::Var(_) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?))),
+                Expression::Unary(UnaryOperator::Complement, _) => {
+                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?)))
+                }
+                Expression::Unary(UnaryOperator::Not, _) => {
+                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?)))
+                }
+                Expression::Unary(UnaryOperator::Negate, _) => {
+                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?)))
+                }
+                _ => Err(SemanticError("Invalid lvalue".to_string())),
+            }
+        }
         Expression::Unary(op, e) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?))),
         Expression::Binary(op, e1, e2) => Ok(Expression::Binary(
             op,

@@ -42,6 +42,10 @@ pub enum UnaryOperator {
     Complement,
     Negate,
     Not,
+    IncrementPrefix,
+    IncrementPostfix,
+    DecrementPrefix,
+    DecrementPostfix,
 }
 
 #[derive(PartialEq, Debug)]
@@ -181,32 +185,57 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
 fn parse_factor(tokens: &mut Vec<Token>) -> Result<Expression, ParseError> {
     let next = consume(tokens);
 
-    match next {
-        Token::Constant(n) => Ok(Expression::Constant(n)),
+    let mut e = match next {
+        Token::Constant(n) => Expression::Constant(n),
         Token::BitwiseComplementOperator => {
             let exp = parse_factor(tokens)?;
 
-            Ok(Expression::Unary(UnaryOperator::Complement, Box::new(exp)))
+            Expression::Unary(UnaryOperator::Complement, Box::new(exp))
         }
         Token::NegationOperator => {
             let exp = parse_factor(tokens)?;
 
-            Ok(Expression::Unary(UnaryOperator::Negate, Box::new(exp)))
+            Expression::Unary(UnaryOperator::Negate, Box::new(exp))
         }
         Token::LogicalNotOperator => {
-            let exp = parse_factor(tokens)?;
+            let exp: Expression = parse_factor(tokens)?;
 
-            Ok(Expression::Unary(UnaryOperator::Not, Box::new(exp)))
+            Expression::Unary(UnaryOperator::Not, Box::new(exp))
         }
-        // Token::DecrementOperator => todo!(),
         Token::OpenParen => {
             let exp = parse_exp(tokens, 0)?;
             expect(tokens, Token::CloseParen)?;
-            Ok(exp)
+            exp
         }
-        Token::Identifier(id) => Ok(Expression::Var(Identifier(id))),
+        Token::Identifier(id) => Expression::Var(Identifier(id)),
+        Token::IncrementOperator => {
+            let exp = parse_exp(tokens, 0)?;
+            Expression::Unary(UnaryOperator::IncrementPrefix, Box::new(exp))
+        }
+        Token::DecrementOperator => {
+            let exp = parse_exp(tokens, 0)?;
+            Expression::Unary(UnaryOperator::DecrementPrefix, Box::new(exp))
+        }
         _ => return Err(ParseError(format!("Malformed expression {:?}", next))),
-    }
+    };
+
+    // postfix
+    e = loop {
+        let next = peek(tokens).expect("peek failed, no token left.");
+        match next {
+            Token::IncrementOperator => {
+                consume(tokens);
+                e = Expression::Unary(UnaryOperator::IncrementPostfix, Box::new(e));
+            }
+            Token::DecrementOperator => {
+                consume(tokens);
+                e = Expression::Unary(UnaryOperator::DecrementPostfix, Box::new(e));
+            }
+            _ => break e,
+        };
+    };
+
+    Ok(e)
 }
 
 fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression, ParseError> {

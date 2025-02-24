@@ -169,6 +169,62 @@ fn convert_exp(
 ) -> Result<Val, TackeyError> {
     match e {
         parse::Expression::Constant(n) => Ok(Val::Constant(n)),
+        parse::Expression::Unary(parse::UnaryOperator::IncrementPrefix, e) => {
+            let src = convert_exp(*e, instructions)?;
+            let dst = Val::Var(Identifier(make_temporary()));
+
+            instructions.push(Instruction::Binary(
+                BinaryOperator::Add,
+                src.clone(),
+                Val::Constant(1),
+                dst.clone(),
+            ));
+            instructions.push(Instruction::Copy(dst.clone(), src.clone()));
+
+            Ok(dst)
+        }
+        parse::Expression::Unary(parse::UnaryOperator::IncrementPostfix, e) => {
+            let src = convert_exp(*e, instructions)?;
+            let dst = Val::Var(Identifier(make_temporary()));
+
+            instructions.push(Instruction::Copy(src.clone(), dst.clone()));
+            instructions.push(Instruction::Binary(
+                BinaryOperator::Add,
+                src.clone(),
+                Val::Constant(1),
+                src.clone(),
+            ));
+
+            Ok(dst)
+        }
+        parse::Expression::Unary(parse::UnaryOperator::DecrementPrefix, e) => {
+            let src = convert_exp(*e, instructions)?;
+            let dst = Val::Var(Identifier(make_temporary()));
+
+            instructions.push(Instruction::Binary(
+                BinaryOperator::Subtract,
+                src.clone(),
+                Val::Constant(1),
+                dst.clone(),
+            ));
+            instructions.push(Instruction::Copy(dst.clone(), src.clone()));
+
+            Ok(dst)
+        }
+        parse::Expression::Unary(parse::UnaryOperator::DecrementPostfix, e) => {
+            let src = convert_exp(*e, instructions)?;
+            let dst = Val::Var(Identifier(make_temporary()));
+
+            instructions.push(Instruction::Copy(src.clone(), dst.clone()));
+            instructions.push(Instruction::Binary(
+                BinaryOperator::Subtract,
+                src.clone(),
+                Val::Constant(1),
+                src.clone(),
+            ));
+
+            Ok(dst)
+        }
         parse::Expression::Unary(op, e) => {
             let src = convert_exp(*e, instructions)?;
             let dst = Val::Var(Identifier(make_temporary()));
@@ -177,6 +233,7 @@ fn convert_exp(
                 parse::UnaryOperator::Complement => UnaryOperator::Complement,
                 parse::UnaryOperator::Negate => UnaryOperator::Negate,
                 parse::UnaryOperator::Not => UnaryOperator::Not,
+                _ => return Err(TackeyError("Unexpected unary operator.".to_string())),
             };
 
             instructions.push(Instruction::Unary(op, src, dst.clone()));

@@ -385,6 +385,113 @@ fn parse_null_statement() {
 }
 
 #[test]
+fn increment1() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 1; ++a; return a; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Statement(Statement::Expression(Expression::Unary(
+                    UnaryOperator::IncrementPrefix,
+                    Box::new(Expression::Var(Identifier("a".to_string())))
+                ))),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ]
+        ))
+    )
+}
+
+#[test]
+fn increment2() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 1; a++; return a; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Statement(Statement::Expression(Expression::Unary(
+                    UnaryOperator::IncrementPostfix,
+                    Box::new(Expression::Var(Identifier("a".to_string())))
+                ))),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ]
+        ))
+    )
+}
+
+#[test]
+fn increment3() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 1; -a++; return a; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Statement(Statement::Expression(Expression::Unary(
+                    UnaryOperator::Negate,
+                    Box::new(Expression::Unary(
+                        UnaryOperator::IncrementPostfix,
+                        Box::new(Expression::Var(Identifier("a".to_string())))
+                    ))
+                ))),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ]
+        ))
+    )
+}
+
+#[test]
+fn increment4() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 10; return a++--; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(10))
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Unary(
+                    UnaryOperator::DecrementPostfix,
+                    Box::new(Expression::Unary(
+                        UnaryOperator::IncrementPostfix,
+                        Box::new(Expression::Var(Identifier("a".to_string())))
+                    ))
+                ))),
+            ]
+        ))
+    )
+}
+
+#[test]
 #[should_panic]
 fn invalid_parse() {
     let mut result = token::tokenize(" int (void) { return 1; } ".into()).unwrap();

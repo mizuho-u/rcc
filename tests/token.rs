@@ -3,7 +3,7 @@ use rc::token::Token;
 
 #[test]
 fn valid_token() {
-    let result = token::tokenize(" int main(void) { return -(~~(--1)); } ".into()).unwrap();
+    let result = token::tokenize(" int main(void) { return -(~~(++(--1))); } ".into()).unwrap();
     assert_eq!(
         result,
         vec![
@@ -19,8 +19,11 @@ fn valid_token() {
             Token::BitwiseComplementOperator,
             Token::BitwiseComplementOperator,
             Token::OpenParen,
+            Token::IncrementOperator,
+            Token::OpenParen,
             Token::DecrementOperator,
             Token::Constant(1),
+            Token::CloseParen,
             Token::CloseParen,
             Token::CloseParen,
             Token::Semicolon,

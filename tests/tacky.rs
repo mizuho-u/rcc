@@ -289,6 +289,62 @@ fn function_with_no_return_statement() {
     )
 }
 
+#[test]
+fn increment_decrement() {
+    let result =
+        tokenize_to_convert(" int main(void) { int a = 1; int b = ++a; a = b--; return a * b; } ");
+
+    assert_eq!(
+        result,
+        tacky::Program::Program(tacky::Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Copy(
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Val::Var(Identifier("var.b.2".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Var(Identifier("tmp.2".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Subtract,
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.b.2".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.2".to_string())),
+                    Val::Var(Identifier("var.a.1".to_string()))
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Multiply,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Var(Identifier("tmp.3".to_string())),
+                ),
+                tacky::Instruction::Return(Val::Var(Identifier("tmp.3".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
 fn tokenize_to_convert(p: &str) -> tacky::Program {
     let mut result = token::tokenize(p.into()).unwrap();
     let result = parse(&mut result).unwrap();

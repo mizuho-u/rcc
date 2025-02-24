@@ -15,6 +15,7 @@ pub enum Token {
     BitwiseComplementOperator,
     NegationOperator,
     DecrementOperator,
+    IncrementOperator,
     AdditionOperator,
     MultiplicationOperator,
     DivisionOperator,
@@ -53,8 +54,9 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
 
     let s = s.trim();
 
-    if let Some(t) = find_token(s, r"^(--|<<|>>|&&|\|\||==|!=|<=|>=)", |c| match c {
+    if let Some(t) = find_token(s, r"^(--|\+\+|<<|>>|&&|\|\||==|!=|<=|>=)", |c| match c {
         "--" => Some(Token::DecrementOperator),
+        "++" => Some(Token::IncrementOperator),
         "<<" => Some(Token::LeftShiftOperator),
         ">>" => Some(Token::RightShiftOperator),
         "&&" => Some(Token::LogicalAndOperator),
