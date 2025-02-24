@@ -173,7 +173,7 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                         });
                         insts.push(Instruction::Binary(convert_binop(op)?, right, dst));
                     }
-                    tacky::BinaryOperator::Devide => {
+                    tacky::BinaryOperator::Divide => {
                         insts.push(Instruction::Mov {
                             src: left,
                             dst: Operand::Reg(Register::AX),

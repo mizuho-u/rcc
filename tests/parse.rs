@@ -201,7 +201,7 @@ fn valid_parse_bitwise_binary_operator2() {
                         Box::new(Expression::Binary(
                             BinaryOperator::RightShift,
                             Box::new(Expression::Binary(
-                                BinaryOperator::LeftShit,
+                                BinaryOperator::LeftShift,
                                 Box::new(Expression::Constant(4)),
                                 Box::new(Expression::Constant(5)),
                             )),
@@ -226,7 +226,7 @@ fn valid_parse_bitwise_binary_operator3() {
             vec![BlockItem::Statement(Statement::Return(Expression::Binary(
                 BinaryOperator::Xor,
                 Box::new(Expression::Binary(
-                    BinaryOperator::LeftShit,
+                    BinaryOperator::LeftShift,
                     Box::new(Expression::Constant(1)),
                     Box::new(Expression::Binary(
                         BinaryOperator::Subtract,

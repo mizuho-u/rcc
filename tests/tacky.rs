@@ -61,7 +61,7 @@ fn valid_tacky_binary() {
                     tacky::Val::Var(Identifier("tmp.2".to_string())),
                 ),
                 tacky::Instruction::Binary(
-                    tacky::BinaryOperator::Devide,
+                    tacky::BinaryOperator::Divide,
                     tacky::Val::Constant(4),
                     tacky::Val::Constant(5),
                     tacky::Val::Var(Identifier("tmp.3".to_string())),
