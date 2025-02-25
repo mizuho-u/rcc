@@ -1,2 +1,4 @@
 /target
-/memo/log
+/memo
+*.out
+.DS_STORE
