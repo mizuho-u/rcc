@@ -46,6 +46,10 @@ pub enum Token {
     CompoundAssignmentXorOperator,
     CompoundAssignmentLeftShiftOperator,
     CompoundAssignmentRightShiftOperator,
+    If,
+    Else,
+    QuestionMark,
+    Colon,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -63,6 +67,17 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
     }
 
     let s = s.trim();
+
+    if let Some(t) = find_token(s, r"^(if|else|\?|\:)", |c| match c {
+        "if" => Some(Token::If),
+        "else" => Some(Token::Else),
+        "?" => Some(Token::QuestionMark),
+        ":" => Some(Token::Colon),
+        _ => None,
+    }) {
+        ts.push(t.0);
+        return _tokenize(&s[t.1..], ts);
+    }
 
     if let Some(t) = find_token(s, r"^(\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<=|>>=)", |c| match c {
         "+=" => Some(Token::CompoundAssignmentAdditionOperator),

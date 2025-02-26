@@ -206,6 +206,16 @@ fn compound_assignment() {
         ]
     )
 }
+
+#[test]
+fn if_statements() {
+    let result = token::tokenize(" if else ? : ".into()).unwrap();
+    assert_eq!(
+        result,
+        vec![Token::If, Token::Else, Token::QuestionMark, Token::Colon,]
+    )
+}
+
 #[test]
 #[should_panic]
 fn invalid_token() {
