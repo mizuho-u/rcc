@@ -662,3 +662,36 @@ fn invalid_parse() {
     let mut result = token::tokenize(" int (void) { return 1; } ".into()).unwrap();
     parse(&mut result).unwrap();
 }
+
+#[test]
+fn prefix_conditional() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 0; return (++a ? ++a : 0); } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Conditional(
+                    Box::new(Expression::Unary(
+                        UnaryOperator::IncrementPrefix,
+                        Box::new(Expression::Var(Identifier("a".to_string())))
+                    )),
+                    Box::new(Expression::Unary(
+                        UnaryOperator::IncrementPrefix,
+                        Box::new(Expression::Var(Identifier("a".to_string())))
+                    )),
+                    Box::new(Expression::Constant(0))
+                )))
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}

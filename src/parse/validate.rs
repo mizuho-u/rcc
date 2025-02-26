@@ -71,7 +71,16 @@ fn resolve_statement(
         Statement::Return(e) => Ok(Statement::Return(resolve_exp(e, varmap)?)),
         Statement::Expression(e) => Ok(Statement::Expression(resolve_exp(e, varmap)?)),
         Statement::Null => Ok(Statement::Null),
-        Statement::If(expression, statement, statement1) => todo!(),
+        Statement::If(cond, then, el) => {
+            let cond = resolve_exp(cond, varmap)?;
+            let then = resolve_statement(*then, varmap)?;
+            if let Some(el) = el {
+                let el = resolve_statement(*el, varmap)?;
+                Ok(Statement::If(cond, Box::new(then), Some(Box::new(el))))
+            } else {
+                Ok(Statement::If(cond, Box::new(then), None))
+            }
+        }
     }
 }
 
@@ -119,6 +128,11 @@ fn resolve_exp(
         Expression::Unary(op, e) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?))),
         Expression::Binary(op, e1, e2) => Ok(Expression::Binary(
             op,
+            Box::new(resolve_exp(*e1, varmap)?),
+            Box::new(resolve_exp(*e2, varmap)?),
+        )),
+        Expression::Conditional(cond, e1, e2) => Ok(Expression::Conditional(
+            Box::new(resolve_exp(*cond, varmap)?),
             Box::new(resolve_exp(*e1, varmap)?),
             Box::new(resolve_exp(*e2, varmap)?),
         )),

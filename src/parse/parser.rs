@@ -243,11 +243,11 @@ fn parse_factor(tokens: &mut Vec<Token>) -> Result<Expression, ParseError> {
         }
         Token::Identifier(id) => Expression::Var(Identifier(id)),
         Token::IncrementOperator => {
-            let exp = parse_exp(tokens, 0)?;
+            let exp = parse_factor(tokens)?;
             Expression::Unary(UnaryOperator::IncrementPrefix, Box::new(exp))
         }
         Token::DecrementOperator => {
-            let exp = parse_exp(tokens, 0)?;
+            let exp = parse_factor(tokens)?;
             Expression::Unary(UnaryOperator::DecrementPrefix, Box::new(exp))
         }
         _ => return Err(ParseError(format!("Malformed expression {:?}", next))),
@@ -289,6 +289,8 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
             left = Expression::Assignment(aop, Box::new(left), Box::new(right));
         } else if *next == Token::QuestionMark {
             let op = consume(tokens);
+            dbg!(&left);
+            dbg!(&tokens);
 
             let middle = parse_exp(tokens, 0)?;
             expect(tokens, Token::Colon)?;
