@@ -158,6 +158,7 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             convert_exp(e, &mut instructions)?;
         }
         parse::Statement::Null => {}
+        parse::Statement::If(expression, statement, statement1) => todo!(),
     }
 
     Ok(instructions)
@@ -303,6 +304,7 @@ fn convert_exp(
             let v = convert_assignment(op, *e1, *e2, instructions)?;
             Ok(v)
         }
+        parse::Expression::Conditional(_, _, _) => todo!(),
     }
 }
 

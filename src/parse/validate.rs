@@ -71,6 +71,7 @@ fn resolve_statement(
         Statement::Return(e) => Ok(Statement::Return(resolve_exp(e, varmap)?)),
         Statement::Expression(e) => Ok(Statement::Expression(resolve_exp(e, varmap)?)),
         Statement::Null => Ok(Statement::Null),
+        Statement::If(expression, statement, statement1) => todo!(),
     }
 }
 

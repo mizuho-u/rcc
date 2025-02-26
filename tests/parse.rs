@@ -575,6 +575,88 @@ fn compound() {
 }
 
 #[test]
+fn if_statement() {
+    let mut result =
+        token::tokenize(" int main(void) { if (1) return 1; return 2; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Statement(Statement::If(
+                    Expression::Constant(1),
+                    Box::new(Statement::Return(Expression::Constant(1))),
+                    None
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Constant(2))),
+            ]
+        ))
+    )
+}
+
+#[test]
+fn if_else_statement() {
+    let mut result =
+        token::tokenize(" int main(void) { if (1) return 1; else return 2; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![BlockItem::Statement(Statement::If(
+                Expression::Constant(1),
+                Box::new(Statement::Return(Expression::Constant(1))),
+                Some(Box::new(Statement::Return(Expression::Constant(2)))),
+            )),]
+        ))
+    )
+}
+
+#[test]
+fn conditional_expression() {
+    let mut result = token::tokenize(" int main(void) { return 1 ? 10 : 20; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![BlockItem::Statement(Statement::Return(
+                Expression::Conditional(
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Constant(10)),
+                    Box::new(Expression::Constant(20))
+                ),
+            )),]
+        ))
+    )
+}
+
+#[test]
+fn nested_conditional_expression() {
+    let mut result =
+        token::tokenize(" int main(void) { return 1 ? 2 ? 10 : 20 : 30; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![BlockItem::Statement(Statement::Return(
+                Expression::Conditional(
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Conditional(
+                        Box::new(Expression::Constant(2)),
+                        Box::new(Expression::Constant(10)),
+                        Box::new(Expression::Constant(20)),
+                    )),
+                    Box::new(Expression::Constant(30))
+                ),
+            )),]
+        ))
+    )
+}
+
+#[test]
 #[should_panic]
 fn invalid_parse() {
     let mut result = token::tokenize(" int (void) { return 1; } ".into()).unwrap();

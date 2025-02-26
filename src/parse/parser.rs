@@ -20,6 +20,7 @@ pub enum BlockItem {
 pub enum Statement {
     Return(Expression),
     Expression(Expression),
+    If(Expression, Box<Statement>, Option<Box<Statement>>),
     Null,
 }
 
@@ -35,6 +36,7 @@ pub enum Expression {
     Unary(UnaryOperator, Box<Expression>),
     Binary(BinaryOperator, Box<Expression>, Box<Expression>),
     Assignment(AssignmentOperator, Box<Expression>, Box<Expression>),
+    Conditional(Box<Expression>, Box<Expression>, Box<Expression>),
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -187,6 +189,23 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
 
             Ok(Statement::Return(e))
         }
+        Token::If => {
+            consume(tokens);
+            expect(tokens, Token::OpenParen)?;
+            let cond = parse_exp(tokens, 0)?;
+            expect(tokens, Token::CloseParen)?;
+            let then = parse_statement(tokens)?;
+
+            let next = peek(tokens).expect("peek failed, no token left.");
+            if *next == Token::Else {
+                consume(tokens);
+                let el = parse_statement(tokens)?;
+
+                Ok(Statement::If(cond, Box::new(then), Some(Box::new(el))))
+            } else {
+                Ok(Statement::If(cond, Box::new(then), None))
+            }
+        }
         _ => {
             let e = parse_exp(tokens, 0)?;
 
@@ -258,7 +277,6 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
 
     loop {
         let next = peek(tokens).expect("peek failed, no token left.");
-
         if precedence(next) < min_prededence {
             break;
         }
@@ -269,6 +287,15 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
             let right = parse_exp(tokens, precedence(&op))?;
 
             left = Expression::Assignment(aop, Box::new(left), Box::new(right));
+        } else if *next == Token::QuestionMark {
+            let op = consume(tokens);
+
+            let middle = parse_exp(tokens, 0)?;
+            expect(tokens, Token::Colon)?;
+
+            let right = parse_exp(tokens, precedence(&op))?;
+
+            left = Expression::Conditional(Box::new(left), Box::new(middle), Box::new(right));
         } else {
             match next {
                 Token::NegationOperator
@@ -363,6 +390,7 @@ fn precedence(token: &Token) -> i32 {
         Token::OrOperator => 30,
         Token::LogicalAndOperator => 29,
         Token::LogicalOrOperator => 28,
+        Token::QuestionMark => 5,
         Token::AssignmentOperator
         | Token::CompoundAssignmentAdditionOperator
         | Token::CompoundAssignmentSubtractOperator
