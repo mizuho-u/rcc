@@ -289,8 +289,6 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
             left = Expression::Assignment(aop, Box::new(left), Box::new(right));
         } else if *next == Token::QuestionMark {
             let op = consume(tokens);
-            dbg!(&left);
-            dbg!(&tokens);
 
             let middle = parse_exp(tokens, 0)?;
             expect(tokens, Token::Colon)?;

@@ -158,7 +158,28 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             convert_exp(e, &mut instructions)?;
         }
         parse::Statement::Null => {}
-        parse::Statement::If(expression, statement, statement1) => todo!(),
+        parse::Statement::If(cond, then, el) => {
+            let endif_label = Identifier(make_label("endif".to_string()));
+            let val = convert_exp(cond, &mut instructions)?;
+
+            if let Some(el) = el {
+                let else_label = Identifier(make_label("else".to_string()));
+
+                instructions.push(Instruction::JumpIfZero(val, else_label.clone()));
+
+                instructions.append(&mut convert_statement(*then)?);
+                instructions.push(Instruction::Jump(endif_label.clone()));
+
+                instructions.push(Instruction::Label(else_label));
+                instructions.append(&mut convert_statement(*el)?);
+
+                instructions.push(Instruction::Label(endif_label));
+            } else {
+                instructions.push(Instruction::JumpIfZero(val, endif_label.clone()));
+                instructions.append(&mut convert_statement(*then)?);
+                instructions.push(Instruction::Label(endif_label));
+            }
+        }
     }
 
     Ok(instructions)
@@ -304,7 +325,26 @@ fn convert_exp(
             let v = convert_assignment(op, *e1, *e2, instructions)?;
             Ok(v)
         }
-        parse::Expression::Conditional(_, _, _) => todo!(),
+        parse::Expression::Conditional(cond, e1, e2) => {
+            let dst = Val::Var(Identifier(make_temporary()));
+            let end_label = Identifier(make_label("endcond".to_string()));
+            let e2_label = Identifier(make_label("e2".to_string()));
+
+            let cond = convert_exp(*cond, instructions)?;
+            instructions.push(Instruction::JumpIfZero(cond, e2_label.clone()));
+
+            let e1 = convert_exp(*e1, instructions)?;
+            instructions.push(Instruction::Copy(e1, dst.clone()));
+            instructions.push(Instruction::Jump(end_label.clone()));
+
+            instructions.push(Instruction::Label(e2_label.clone()));
+            let e2 = convert_exp(*e2, instructions)?;
+            instructions.push(Instruction::Copy(e2, dst.clone()));
+
+            instructions.push(Instruction::Label(end_label.clone()));
+
+            Ok(dst)
+        }
     }
 }
 

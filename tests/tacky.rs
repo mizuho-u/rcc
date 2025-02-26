@@ -1,5 +1,7 @@
 use rc::parse::{parse, validate};
-use rc::tacky::{self, convert, BinaryOperator, Identifier, Instruction, UnaryOperator, Val};
+use rc::tacky::{
+    self, convert, BinaryOperator, Function, Identifier, Instruction, Program, UnaryOperator, Val,
+};
 use rc::token;
 
 #[test]
@@ -369,6 +371,73 @@ fn compound_assignment() {
                     Val::Var(Identifier("var.a.1".to_string())),
                 ),
                 tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn if_statement() {
+    let result = tokenize_to_convert(" int main(void) { if(1) return 2; return 3; } ");
+
+    assert_eq!(
+        result,
+        tacky::Program::Program(tacky::Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::JumpIfZero(Val::Constant(1), Identifier("endif.1".to_string())),
+                tacky::Instruction::Return(Val::Constant(2)),
+                tacky::Instruction::Label(Identifier("endif.1".to_string())),
+                tacky::Instruction::Return(Val::Constant(3)),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn if_else_statement() {
+    let result = tokenize_to_convert(" int main(void) { if(1) return 2; else return 3; } ");
+
+    assert_eq!(
+        result,
+        tacky::Program::Program(tacky::Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::JumpIfZero(Val::Constant(1), Identifier("else.2".to_string())),
+                tacky::Instruction::Return(Val::Constant(2)),
+                Instruction::Jump(Identifier("endif.1".to_string())),
+                tacky::Instruction::Label(Identifier("else.2".to_string())),
+                tacky::Instruction::Return(Val::Constant(3)),
+                tacky::Instruction::Label(Identifier("endif.1".to_string())),
+                // returnがない判定で挿入されてしまう・・そのうち治るはず
+                tacky::Instruction::Return(Val::Constant(0)),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn conditional_expression() {
+    let result = tokenize_to_convert(" int main(void) { return 1 ? 2 : 3; } ");
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::JumpIfZero(Val::Constant(1), Identifier("e2.2".to_string())),
+                Instruction::Copy(Val::Constant(2), Val::Var(Identifier("tmp.1".to_string()))),
+                Instruction::Jump(Identifier("endcond.1".to_string())),
+                Instruction::Label(Identifier("e2.2".to_string())),
+                Instruction::Copy(Val::Constant(3), Val::Var(Identifier("tmp.1".to_string()))),
+                Instruction::Label(Identifier("endcond.1".to_string())),
+                tacky::Instruction::Return(Val::Var(Identifier("tmp.1".to_string()))),
             ]
         )),
         "{:#?}",
