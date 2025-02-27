@@ -217,6 +217,12 @@ fn if_statements() {
 }
 
 #[test]
+fn goto() {
+    let result = token::tokenize(" goto ".into()).unwrap();
+    assert_eq!(result, vec![Token::Goto])
+}
+
+#[test]
 #[should_panic]
 fn invalid_token() {
     token::tokenize(" 1foo ".into()).unwrap();
