@@ -1,4 +1,4 @@
-use crate::parse::{self, AssignmentOperator, BlockItem, Expression};
+use crate::parse::{self, AssignmentOperator, Block, BlockItem, Expression};
 use std::cell::RefCell;
 
 #[derive(PartialEq, Debug)]
@@ -87,13 +87,9 @@ fn convert_program(p: parse::Program) -> Result<Program, TackeyError> {
 }
 
 fn convert_function(f: parse::Function) -> Result<Function, TackeyError> {
-    let parse::Function::Function(id, parse::Block::Block(stmts)) = f;
+    let parse::Function::Function(id, body) = f;
 
-    let mut insts = Vec::new();
-
-    for b in stmts {
-        insts.append(&mut convert_block_item(b)?);
-    }
+    let mut insts = convert_block(body)?;
 
     // これはok
     // int main(void) {
@@ -123,6 +119,20 @@ fn convert_function(f: parse::Function) -> Result<Function, TackeyError> {
     }
 
     Ok(Function::Function(Identifier(id.0), insts))
+}
+
+fn convert_block(b: Block) -> Result<Vec<Instruction>, TackeyError> {
+    let mut insts = Vec::new();
+
+    match b {
+        Block::Block(items) => {
+            for b in items {
+                insts.append(&mut convert_block_item(b)?);
+            }
+        }
+    }
+
+    Ok(insts)
 }
 
 fn convert_block_item(b: BlockItem) -> Result<Vec<Instruction>, TackeyError> {
@@ -185,7 +195,7 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             instructions.push(Instruction::Label(Identifier(id.0)));
             instructions.append(&mut convert_statement(*s)?);
         }
-        parse::Statement::Compound(block) => todo!(),
+        parse::Statement::Compound(b) => instructions.append(&mut convert_block(b)?),
     }
 
     Ok(instructions)
