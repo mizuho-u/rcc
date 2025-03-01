@@ -87,7 +87,7 @@ fn convert_program(p: parse::Program) -> Result<Program, TackeyError> {
 }
 
 fn convert_function(f: parse::Function) -> Result<Function, TackeyError> {
-    let parse::Function::Function(id, stmts) = f;
+    let parse::Function::Function(id, parse::Block::Block(stmts)) = f;
 
     let mut insts = Vec::new();
 
@@ -185,6 +185,7 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             instructions.push(Instruction::Label(Identifier(id.0)));
             instructions.append(&mut convert_statement(*s)?);
         }
+        parse::Statement::Compound(block) => todo!(),
     }
 
     Ok(instructions)

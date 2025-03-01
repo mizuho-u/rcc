@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use super::{
-    label::validate_label, BlockItem, Declaration, Expression, Function, Identifier, Program,
-    Statement, UnaryOperator,
+    label::validate_label, Block, BlockItem, Declaration, Expression, Function, Identifier,
+    Program, Statement, UnaryOperator,
 };
 
 #[derive(Debug)]
@@ -25,7 +25,7 @@ pub fn validate(p: Program) -> Result<Program, SemanticError> {
     let mut var: HashMap<String, String> = HashMap::new();
     let mut label: HashMap<String, String> = HashMap::new();
 
-    let Program::Program(Function::Function(id, body)) = p;
+    let Program::Program(Function::Function(id, Block::Block(body))) = p;
 
     let mut r_body = Vec::new();
     for b in body {
@@ -34,7 +34,10 @@ pub fn validate(p: Program) -> Result<Program, SemanticError> {
 
     validate_label(&mut r_body, &label)?;
 
-    Ok(Program::Program(Function::Function(id, r_body)))
+    Ok(Program::Program(Function::Function(
+        id,
+        Block::Block(r_body),
+    )))
 }
 
 fn resolve_block_item(
@@ -103,6 +106,7 @@ fn resolve_statement(
                 ))
             }
         }
+        Statement::Compound(block) => todo!(),
     }
 }
 

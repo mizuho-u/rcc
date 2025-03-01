@@ -7,7 +7,12 @@ pub enum Program {
 
 #[derive(PartialEq, Debug)]
 pub enum Function {
-    Function(Identifier, Vec<BlockItem>),
+    Function(Identifier, Block),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum Block {
+    Block(Vec<BlockItem>),
 }
 
 #[derive(PartialEq, Debug)]
@@ -24,6 +29,7 @@ pub enum Statement {
     Null,
     Goto(Identifier),
     Label(Identifier, Box<Statement>),
+    Compound(Block),
 }
 
 #[derive(PartialEq, Debug)]
@@ -130,6 +136,13 @@ fn parse_function_definition(tokens: &mut Vec<Token>) -> Result<Function, ParseE
     expect(tokens, Token::OpenParen)?;
     expect(tokens, Token::Void)?;
     expect(tokens, Token::CloseParen)?;
+
+    let block = parse_block(tokens)?;
+
+    Ok(Function::Function(id, block))
+}
+
+fn parse_block(tokens: &mut Vec<Token>) -> Result<Block, ParseError> {
     expect(tokens, Token::OpenBrace)?;
 
     let mut body = Vec::new();
@@ -144,7 +157,7 @@ fn parse_function_definition(tokens: &mut Vec<Token>) -> Result<Function, ParseE
 
     expect(tokens, Token::CloseBrace)?;
 
-    Ok(Function::Function(id, body))
+    Ok(Block::Block(body))
 }
 
 fn parse_block_item(tokens: &mut Vec<Token>) -> Result<BlockItem, ParseError> {
@@ -227,6 +240,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
                 Ok(parse_statement_expression(tokens)?)
             }
         }
+        Token::OpenBrace => Ok(Statement::Compound(parse_block(tokens)?)),
         _ => Ok(parse_statement_expression(tokens)?),
     }
 }

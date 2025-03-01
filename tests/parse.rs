@@ -9,9 +9,9 @@ fn valid_parse() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
                 Expression::Constant(1)
-            ))]
+            ))])
         ))
     )
 }
@@ -24,13 +24,15 @@ fn valid_parse_unary() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Unary(
-                UnaryOperator::Complement,
-                Box::new(Expression::Unary(
-                    UnaryOperator::Negate,
-                    Box::new(Expression::Constant(1))
-                ))
-            )))]
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Unary(
+                    UnaryOperator::Complement,
+                    Box::new(Expression::Unary(
+                        UnaryOperator::Negate,
+                        Box::new(Expression::Constant(1))
+                    ))
+                )
+            ))])
         ))
     )
 }
@@ -43,11 +45,13 @@ fn valid_parse_binary1() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::Add,
-                Box::new(Expression::Constant(1)),
-                Box::new(Expression::Constant(2)),
-            )))]
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::Add,
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Constant(2)),
+                )
+            ))])
         ))
     )
 }
@@ -60,15 +64,17 @@ fn valid_parse_binary2() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::Add,
-                Box::new(Expression::Binary(
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
                     BinaryOperator::Add,
-                    Box::new(Expression::Constant(1)),
-                    Box::new(Expression::Constant(2)),
-                )),
-                Box::new(Expression::Constant(3)),
-            )))]
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Constant(1)),
+                        Box::new(Expression::Constant(2)),
+                    )),
+                    Box::new(Expression::Constant(3)),
+                )
+            ))])
         ))
     )
 }
@@ -81,15 +87,17 @@ fn valid_parse_binary3() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::Add,
-                Box::new(Expression::Constant(1)),
-                Box::new(Expression::Binary(
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
                     BinaryOperator::Add,
-                    Box::new(Expression::Constant(2)),
-                    Box::new(Expression::Constant(3)),
-                )),
-            )))]
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Constant(2)),
+                        Box::new(Expression::Constant(3)),
+                    )),
+                )
+            ))])
         ))
     )
 }
@@ -102,15 +110,17 @@ fn valid_parse_binary4() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::Add,
-                Box::new(Expression::Constant(1)),
-                Box::new(Expression::Binary(
-                    BinaryOperator::Multiply,
-                    Box::new(Expression::Constant(2)),
-                    Box::new(Expression::Constant(3)),
-                )),
-            )))]
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::Add,
+                    Box::new(Expression::Constant(1)),
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Multiply,
+                        Box::new(Expression::Constant(2)),
+                        Box::new(Expression::Constant(3)),
+                    )),
+                )
+            ))])
         ))
     )
 }
@@ -123,15 +133,17 @@ fn valid_parse_binary5() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::Multiply,
-                Box::new(Expression::Binary(
-                    BinaryOperator::Add,
-                    Box::new(Expression::Constant(1)),
-                    Box::new(Expression::Constant(2)),
-                )),
-                Box::new(Expression::Constant(3)),
-            )))]
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::Multiply,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Constant(1)),
+                        Box::new(Expression::Constant(2)),
+                    )),
+                    Box::new(Expression::Constant(3)),
+                )
+            ))])
         ))
     )
 }
@@ -144,21 +156,23 @@ fn valid_parse_binary6() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::Multiply,
-                Box::new(Expression::Binary(
-                    BinaryOperator::Add,
-                    Box::new(Expression::Unary(
-                        UnaryOperator::Negate,
-                        Box::new(Expression::Constant(1))
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::Multiply,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Unary(
+                            UnaryOperator::Negate,
+                            Box::new(Expression::Constant(1))
+                        )),
+                        Box::new(Expression::Constant(2)),
                     )),
-                    Box::new(Expression::Constant(2)),
-                )),
-                Box::new(Expression::Unary(
-                    UnaryOperator::Complement,
-                    Box::new(Expression::Constant(3))
-                )),
-            )))]
+                    Box::new(Expression::Unary(
+                        UnaryOperator::Complement,
+                        Box::new(Expression::Constant(3))
+                    )),
+                )
+            ))])
         ))
     )
 }
@@ -171,11 +185,13 @@ fn valid_parse_bitwise_binary_operator1() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::And,
-                Box::new(Expression::Constant(3)),
-                Box::new(Expression::Constant(1)),
-            )))]
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::And,
+                    Box::new(Expression::Constant(3)),
+                    Box::new(Expression::Constant(1)),
+                )
+            ))])
         ))
     )
 }
@@ -189,27 +205,29 @@ fn valid_parse_bitwise_binary_operator2() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::Or,
-                Box::new(Expression::Constant(1)),
-                Box::new(Expression::Binary(
-                    BinaryOperator::Xor,
-                    Box::new(Expression::Constant(2)),
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::Or,
+                    Box::new(Expression::Constant(1)),
                     Box::new(Expression::Binary(
-                        BinaryOperator::And,
-                        Box::new(Expression::Constant(3)),
+                        BinaryOperator::Xor,
+                        Box::new(Expression::Constant(2)),
                         Box::new(Expression::Binary(
-                            BinaryOperator::RightShift,
+                            BinaryOperator::And,
+                            Box::new(Expression::Constant(3)),
                             Box::new(Expression::Binary(
-                                BinaryOperator::LeftShift,
-                                Box::new(Expression::Constant(4)),
-                                Box::new(Expression::Constant(5)),
-                            )),
-                            Box::new(Expression::Constant(6)),
-                        ))
+                                BinaryOperator::RightShift,
+                                Box::new(Expression::Binary(
+                                    BinaryOperator::LeftShift,
+                                    Box::new(Expression::Constant(4)),
+                                    Box::new(Expression::Constant(5)),
+                                )),
+                                Box::new(Expression::Constant(6)),
+                            ))
+                        )),
                     )),
-                )),
-            )))]
+                )
+            ))])
         ))
     )
 }
@@ -223,23 +241,25 @@ fn valid_parse_bitwise_binary_operator3() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::Xor,
-                Box::new(Expression::Binary(
-                    BinaryOperator::LeftShift,
-                    Box::new(Expression::Constant(1)),
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::Xor,
                     Box::new(Expression::Binary(
-                        BinaryOperator::Subtract,
-                        Box::new(Expression::Constant(2)),
+                        BinaryOperator::LeftShift,
+                        Box::new(Expression::Constant(1)),
                         Box::new(Expression::Binary(
-                            BinaryOperator::Multiply,
-                            Box::new(Expression::Constant(3)),
-                            Box::new(Expression::Constant(4)),
+                            BinaryOperator::Subtract,
+                            Box::new(Expression::Constant(2)),
+                            Box::new(Expression::Binary(
+                                BinaryOperator::Multiply,
+                                Box::new(Expression::Constant(3)),
+                                Box::new(Expression::Constant(4)),
+                            )),
                         )),
                     )),
-                )),
-                Box::new(Expression::Constant(5)),
-            )))]
+                    Box::new(Expression::Constant(5)),
+                )
+            ))])
         ))
     )
 }
@@ -252,18 +272,20 @@ fn logical_operator() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::LogicalOr,
-                Box::new(Expression::Binary(
-                    BinaryOperator::LogicalAnd,
-                    Box::new(Expression::Unary(
-                        UnaryOperator::Not,
-                        Box::new(Expression::Constant(1))
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::LogicalOr,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::LogicalAnd,
+                        Box::new(Expression::Unary(
+                            UnaryOperator::Not,
+                            Box::new(Expression::Constant(1))
+                        )),
+                        Box::new(Expression::Constant(2)),
                     )),
-                    Box::new(Expression::Constant(2)),
-                )),
-                Box::new(Expression::Constant(3)),
-            )))]
+                    Box::new(Expression::Constant(3)),
+                )
+            ))])
         ))
     )
 }
@@ -279,31 +301,33 @@ fn relational_operator() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(Expression::Binary(
-                BinaryOperator::NotEqualTo,
-                Box::new(Expression::Binary(
-                    BinaryOperator::EqualTo,
-                    Box::new(Expression::Constant(1)),
-                    Box::new(Expression::Constant(2)),
-                )),
-                Box::new(Expression::Binary(
-                    BinaryOperator::GreaterOrEqual,
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
+                Expression::Binary(
+                    BinaryOperator::NotEqualTo,
                     Box::new(Expression::Binary(
-                        BinaryOperator::LessOrEqual,
-                        Box::new(Expression::Binary(
-                            BinaryOperator::GreaterThan,
-                            Box::new(Expression::Binary(
-                                BinaryOperator::LessThan,
-                                Box::new(Expression::Constant(3)),
-                                Box::new(Expression::Constant(4)),
-                            )),
-                            Box::new(Expression::Constant(5)),
-                        )),
-                        Box::new(Expression::Constant(6)),
+                        BinaryOperator::EqualTo,
+                        Box::new(Expression::Constant(1)),
+                        Box::new(Expression::Constant(2)),
                     )),
-                    Box::new(Expression::Constant(7)),
-                )),
-            )))]
+                    Box::new(Expression::Binary(
+                        BinaryOperator::GreaterOrEqual,
+                        Box::new(Expression::Binary(
+                            BinaryOperator::LessOrEqual,
+                            Box::new(Expression::Binary(
+                                BinaryOperator::GreaterThan,
+                                Box::new(Expression::Binary(
+                                    BinaryOperator::LessThan,
+                                    Box::new(Expression::Constant(3)),
+                                    Box::new(Expression::Constant(4)),
+                                )),
+                                Box::new(Expression::Constant(5)),
+                            )),
+                            Box::new(Expression::Constant(6)),
+                        )),
+                        Box::new(Expression::Constant(7)),
+                    )),
+                )
+            ))])
         ))
     )
 }
@@ -316,7 +340,7 @@ fn parse_declaration() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(1))
@@ -324,7 +348,7 @@ fn parse_declaration() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "a".to_string()
                 ))))
-            ]
+            ])
         ))
     )
 }
@@ -339,7 +363,7 @@ fn parse_assignment() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(1))
@@ -358,7 +382,7 @@ fn parse_assignment() {
                     Box::new(Expression::Var(Identifier("a".to_string()))),
                     Box::new(Expression::Var(Identifier("b".to_string()))),
                 )))
-            ]
+            ])
         ))
     )
 }
@@ -371,7 +395,7 @@ fn parse_null_statement() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(1))
@@ -380,7 +404,7 @@ fn parse_null_statement() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "a".to_string()
                 ))))
-            ]
+            ])
         ))
     )
 }
@@ -394,7 +418,7 @@ fn increment1() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(1))
@@ -406,7 +430,7 @@ fn increment1() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "a".to_string()
                 ))))
-            ]
+            ])
         ))
     )
 }
@@ -420,7 +444,7 @@ fn increment2() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(1))
@@ -432,7 +456,7 @@ fn increment2() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "a".to_string()
                 ))))
-            ]
+            ])
         ))
     )
 }
@@ -446,7 +470,7 @@ fn increment3() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(1))
@@ -461,7 +485,7 @@ fn increment3() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "a".to_string()
                 ))))
-            ]
+            ])
         ))
     )
 }
@@ -475,7 +499,7 @@ fn increment4() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(10))
@@ -487,7 +511,7 @@ fn increment4() {
                         Box::new(Expression::Var(Identifier("a".to_string())))
                     ))
                 ))),
-            ]
+            ])
         ))
     )
 }
@@ -503,7 +527,7 @@ fn compound() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(1))
@@ -569,7 +593,7 @@ fn compound() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "a".to_string()
                 )))),
-            ]
+            ])
         ))
     )
 }
@@ -583,14 +607,14 @@ fn if_statement() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Statement(Statement::If(
                     Expression::Constant(1),
                     Box::new(Statement::Return(Expression::Constant(1))),
                     None
                 )),
                 BlockItem::Statement(Statement::Return(Expression::Constant(2))),
-            ]
+            ])
         ))
     )
 }
@@ -604,11 +628,11 @@ fn if_else_statement() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::If(
+            Block::Block(vec![BlockItem::Statement(Statement::If(
                 Expression::Constant(1),
                 Box::new(Statement::Return(Expression::Constant(1))),
                 Some(Box::new(Statement::Return(Expression::Constant(2)))),
-            )),]
+            )),])
         ))
     )
 }
@@ -621,13 +645,13 @@ fn conditional_expression() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
                 Expression::Conditional(
                     Box::new(Expression::Constant(1)),
                     Box::new(Expression::Constant(10)),
                     Box::new(Expression::Constant(20))
                 ),
-            )),]
+            )),])
         ))
     )
 }
@@ -641,7 +665,7 @@ fn nested_conditional_expression() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
                 Expression::Conditional(
                     Box::new(Expression::Constant(1)),
                     Box::new(Expression::Conditional(
@@ -651,7 +675,7 @@ fn nested_conditional_expression() {
                     )),
                     Box::new(Expression::Constant(30))
                 ),
-            )),]
+            )),])
         ))
     )
 }
@@ -673,7 +697,7 @@ fn prefix_conditional() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(0))
@@ -689,7 +713,7 @@ fn prefix_conditional() {
                     )),
                     Box::new(Expression::Constant(0))
                 )))
-            ]
+            ])
         )),
         "{:#?}",
         result
@@ -708,7 +732,7 @@ fn goto_statement() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("a".to_string()),
                     Some(Expression::Constant(0))
@@ -729,7 +753,93 @@ fn goto_statement() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "b".to_string()
                 ))))
-            ]
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn compound_statement() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 0; { int b = 1; b = 2; } return a; } ".into())
+            .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::Compound(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Declaration(
+                        Identifier("b".to_string()),
+                        Some(Expression::Constant(1))
+                    )),
+                    BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                        AssignmentOperator::Simple,
+                        Box::new(Expression::Var(Identifier("b".to_string()))),
+                        Box::new(Expression::Constant(2)),
+                    ))),
+                ]))),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn compound_if_statement() {
+    let mut result = token::tokenize(
+        " int main(void) { int a = 0; if (0) { int b = 1; b = 2; } else { a = 3; } return a; } "
+            .into(),
+    )
+    .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::If(
+                    Expression::Constant(0),
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Declaration(Declaration::Declaration(
+                            Identifier("b".to_string()),
+                            Some(Expression::Constant(1))
+                        )),
+                        BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                            AssignmentOperator::Simple,
+                            Box::new(Expression::Var(Identifier("b".to_string()))),
+                            Box::new(Expression::Constant(2)),
+                        ))),
+                    ]))),
+                    Some(Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::Expression(Expression::Assignment(
+                            AssignmentOperator::Simple,
+                            Box::new(Expression::Var(Identifier("a".to_string()))),
+                            Box::new(Expression::Constant(3)),
+                        ))),
+                    ]))))
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
         )),
         "{:#?}",
         result

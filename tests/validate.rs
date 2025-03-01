@@ -9,9 +9,9 @@ fn no_resolution() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![BlockItem::Statement(Statement::Return(
+            Block::Block(vec![BlockItem::Statement(Statement::Return(
                 Expression::Constant(1)
-            ))]
+            ))])
         ))
     )
 }
@@ -24,7 +24,7 @@ fn var_resolution() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("var.a.1".to_string()),
                     Some(Expression::Constant(1))
@@ -32,7 +32,7 @@ fn var_resolution() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "var.a.1".to_string()
                 ))))
-            ]
+            ])
         ))
     )
 }
@@ -45,7 +45,7 @@ fn using_variables_in_their_own_initializers() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("var.a.1".to_string()),
                     Some(Expression::Binary(
@@ -57,7 +57,7 @@ fn using_variables_in_their_own_initializers() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "var.a.1".to_string()
                 ))))
-            ]
+            ])
         ))
     )
 }
@@ -71,7 +71,7 @@ fn mixed_precedence_assignment() {
         result,
         Program::Program(Function::Function(
             Identifier("main".to_string()),
-            vec![
+            Block::Block(vec![
                 BlockItem::Declaration(Declaration::Declaration(
                     Identifier("var.a.1".to_string()),
                     Some(Expression::Binary(
@@ -83,7 +83,7 @@ fn mixed_precedence_assignment() {
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "var.a.1".to_string()
                 ))))
-            ]
+            ])
         ),),
         "{:#?}",
         result
