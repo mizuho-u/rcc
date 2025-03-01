@@ -695,3 +695,43 @@ fn prefix_conditional() {
         result
     )
 }
+
+#[test]
+fn goto_statement() {
+    let mut result = token::tokenize(
+        " int main(void) { int a = 0; goto label; int b = 1; label: b = 2; return b; } ".into(),
+    )
+    .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::Goto(Identifier("label".to_string()))),
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("b".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Statement(Statement::Label(
+                    Identifier("label".to_string()),
+                    Box::new(Statement::Expression(Expression::Assignment(
+                        AssignmentOperator::Simple,
+                        Box::new(Expression::Var(Identifier("b".to_string()))),
+                        Box::new(Expression::Constant(2)),
+                    ))),
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "b".to_string()
+                ))))
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}

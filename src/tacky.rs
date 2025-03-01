@@ -180,6 +180,11 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
                 instructions.push(Instruction::Label(endif_label));
             }
         }
+        parse::Statement::Goto(id) => instructions.push(Instruction::Jump(Identifier(id.0))),
+        parse::Statement::Label(id, s) => {
+            instructions.push(Instruction::Label(Identifier(id.0)));
+            instructions.append(&mut convert_statement(*s)?);
+        }
     }
 
     Ok(instructions)

@@ -445,6 +445,43 @@ fn conditional_expression() {
     )
 }
 
+#[test]
+fn goto() {
+    let result = tokenize_to_convert(
+        " int main(void) { int a = 0; int b = 1; goto label; int c = 1; label: b = 2; return b; } ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.b.2".to_string())),
+                ),
+                Instruction::Jump(Identifier("lbl.label.4".to_string())),
+                Instruction::Copy(
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.c.3".to_string())),
+                ),
+                Instruction::Label(Identifier("lbl.label.4".to_string())),
+                Instruction::Copy(
+                    Val::Constant(2),
+                    Val::Var(Identifier("var.b.2".to_string()))
+                ),
+                tacky::Instruction::Return(Val::Var(Identifier("var.b.2".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
 fn tokenize_to_convert(p: &str) -> tacky::Program {
     let mut result = token::tokenize(p.into()).unwrap();
     let result = parse(&mut result).unwrap();

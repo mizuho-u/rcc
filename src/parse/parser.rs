@@ -22,6 +22,8 @@ pub enum Statement {
     Expression(Expression),
     If(Expression, Box<Statement>, Option<Box<Statement>>),
     Null,
+    Goto(Identifier),
+    Label(Identifier, Box<Statement>),
 }
 
 #[derive(PartialEq, Debug)]
@@ -206,14 +208,45 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
                 Ok(Statement::If(cond, Box::new(then), None))
             }
         }
-        _ => {
-            let e = parse_exp(tokens, 0)?;
+        Token::Goto => {
+            consume(tokens);
+            if let Token::Identifier(i) = consume(tokens) {
+                consume(tokens);
+                Ok(Statement::Goto(Identifier(i)))
+            } else {
+                Err(ParseError(format!("expect identifier")))
+            }
+        }
+        Token::Identifier(_) => {
+            if let Some(id) = peek_label(tokens) {
+                consume(tokens);
+                consume(tokens);
 
-            expect(tokens, Token::Semicolon)?;
+                Ok(Statement::Label(id, Box::new(parse_statement(tokens)?)))
+            } else {
+                Ok(parse_statement_expression(tokens)?)
+            }
+        }
+        _ => Ok(parse_statement_expression(tokens)?),
+    }
+}
 
-            Ok(Statement::Expression(e))
+fn peek_label(tokens: &Vec<Token>) -> Option<Identifier> {
+    let next = peek(tokens).expect("peek failed, no token left.");
+    if let Token::Identifier(id) = next {
+        let next_two_ahead = peek_two_ahead(tokens).expect("peek failed, no token left.");
+        if *next_two_ahead == Token::Colon {
+            return Some(Identifier(id.clone()));
         }
     }
+
+    return None;
+}
+
+fn parse_statement_expression(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
+    let e = parse_exp(tokens, 0)?;
+    expect(tokens, Token::Semicolon)?;
+    Ok(Statement::Expression(e))
 }
 
 fn parse_factor(tokens: &mut Vec<Token>) -> Result<Expression, ParseError> {
@@ -443,6 +476,14 @@ fn peek(tokens: &Vec<Token>) -> Option<&Token> {
         None
     } else {
         Some(&tokens[0])
+    }
+}
+
+fn peek_two_ahead(tokens: &Vec<Token>) -> Option<&Token> {
+    if tokens.len() == 0 {
+        None
+    } else {
+        Some(&tokens[1])
     }
 }
 

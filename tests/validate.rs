@@ -113,3 +113,19 @@ fn tokenize_to_validate(p: &str) -> Program {
     let result = parse(&mut result).unwrap();
     validate(result).unwrap()
 }
+
+#[should_panic]
+#[test]
+fn duplicate_goto_label() {
+    let res =
+        tokenize_to_validate(" int main(void) { int a = 1; label_a: a = 2; label_a: return a; } ");
+    dbg!(res);
+}
+
+#[should_panic]
+#[test]
+fn goto_undefined_label() {
+    tokenize_to_validate(
+        " int main(void) { goto label_b; int a = 1; label_a: int b = 2; return a; } ",
+    );
+}

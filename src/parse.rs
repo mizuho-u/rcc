@@ -1,3 +1,4 @@
+mod label;
 pub mod parser;
 mod validate;
 

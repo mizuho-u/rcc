@@ -2,11 +2,12 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use super::{
-    BlockItem, Declaration, Expression, Function, Identifier, Program, Statement, UnaryOperator,
+    label::validate_label, BlockItem, Declaration, Expression, Function, Identifier, Program,
+    Statement, UnaryOperator,
 };
 
 #[derive(Debug)]
-pub struct SemanticError(String);
+pub struct SemanticError(pub String);
 
 impl std::fmt::Display for SemanticError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -21,14 +22,17 @@ impl From<String> for SemanticError {
 }
 
 pub fn validate(p: Program) -> Result<Program, SemanticError> {
-    let mut map: HashMap<String, String> = HashMap::new();
+    let mut var: HashMap<String, String> = HashMap::new();
+    let mut label: HashMap<String, String> = HashMap::new();
 
     let Program::Program(Function::Function(id, body)) = p;
 
     let mut r_body = Vec::new();
     for b in body {
-        r_body.push(resolve_block_item(b, &mut map)?);
+        r_body.push(resolve_block_item(b, &mut var, &mut label)?);
     }
+
+    validate_label(&mut r_body, &label)?;
 
     Ok(Program::Program(Function::Function(id, r_body)))
 }
@@ -36,16 +40,19 @@ pub fn validate(p: Program) -> Result<Program, SemanticError> {
 fn resolve_block_item(
     b: BlockItem,
     varmap: &mut HashMap<String, String>,
+    labelmap: &mut HashMap<String, String>,
 ) -> Result<BlockItem, SemanticError> {
     match b {
-        BlockItem::Statement(s) => Ok(BlockItem::Statement(resolve_statement(s, varmap)?)),
+        BlockItem::Statement(s) => Ok(BlockItem::Statement(resolve_statement(
+            s, varmap, labelmap,
+        )?)),
         BlockItem::Declaration(declaration) => match declaration {
             Declaration::Declaration(Identifier(s), exp) => {
                 if varmap.contains_key(&s) {
                     return Err(SemanticError("Duplicate variable declaration".to_string()));
                 }
 
-                let name = make_temporary(&s);
+                let name = make_temporary(&format!("var.{}", &s));
                 varmap.insert(s.clone(), name.clone());
 
                 let exp = if let Some(exp) = exp {
@@ -65,7 +72,8 @@ fn resolve_block_item(
 
 fn resolve_statement(
     s: Statement,
-    varmap: &HashMap<String, String>,
+    varmap: &mut HashMap<String, String>,
+    labelmap: &mut HashMap<String, String>,
 ) -> Result<Statement, SemanticError> {
     match s {
         Statement::Return(e) => Ok(Statement::Return(resolve_exp(e, varmap)?)),
@@ -73,12 +81,26 @@ fn resolve_statement(
         Statement::Null => Ok(Statement::Null),
         Statement::If(cond, then, el) => {
             let cond = resolve_exp(cond, varmap)?;
-            let then = resolve_statement(*then, varmap)?;
+            let then = resolve_statement(*then, varmap, labelmap)?;
             if let Some(el) = el {
-                let el = resolve_statement(*el, varmap)?;
+                let el = resolve_statement(*el, varmap, labelmap)?;
                 Ok(Statement::If(cond, Box::new(then), Some(Box::new(el))))
             } else {
                 Ok(Statement::If(cond, Box::new(then), None))
+            }
+        }
+        Statement::Goto(id) => Ok(Statement::Goto(id)),
+        Statement::Label(id, ls) => {
+            if let Some(s) = labelmap.get(&id.0) {
+                Ok(Statement::Label(Identifier(s.clone()), ls))
+            } else {
+                let name = make_temporary(&format!("lbl.{}", &id.0));
+                labelmap.insert(id.0, name.clone());
+
+                Ok(Statement::Label(
+                    Identifier(name),
+                    Box::new(resolve_statement(*ls, varmap, labelmap)?),
+                ))
             }
         }
     }
@@ -152,5 +174,5 @@ fn make_temporary(prefix: &String) -> String {
         *c
     });
 
-    format!("var.{}.{}", prefix, count)
+    format!("{}.{}", prefix, count)
 }
