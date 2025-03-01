@@ -484,8 +484,8 @@ fn goto() {
 
 fn tokenize_to_convert(p: &str) -> tacky::Program {
     let mut result = token::tokenize(p.into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    let result = validate(result).unwrap();
+    let mut result = parse(&mut result).unwrap();
+    validate(&mut result).unwrap();
 
     convert(result).unwrap()
 }

@@ -21,8 +21,8 @@ fn binop() {
 fn tokenize_to_generate(p: &str) -> String {
     let mut result = token::tokenize(p.into()).unwrap();
 
-    let result = parse::parse(&mut result).unwrap();
-    let result = parse::validate(result).unwrap();
+    let mut result = parse::parse(&mut result).unwrap();
+    parse::validate(&mut result).unwrap();
 
     let result = tacky::convert(result).unwrap();
 

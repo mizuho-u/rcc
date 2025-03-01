@@ -20,39 +20,36 @@ impl From<String> for SemanticError {
     }
 }
 
-pub fn validate(p: Program) -> Result<Program, SemanticError> {
+pub fn validate(p: &mut Program) -> Result<(), SemanticError> {
     let mut var = Env::new();
     let mut label = Env::new();
 
-    let Program::Program(Function::Function(id, Block::Block(body))) = p;
+    let Program::Program(Function::Function(_id, b)) = p;
 
-    let mut block = resolve_block(Block::Block(body), &mut var, &mut label)?;
+    resolve_block(b, &mut var, &mut label)?;
 
-    validate_label(&mut block, &label)?;
+    validate_label(b, &label)?;
 
-    Ok(Program::Program(Function::Function(id, block)))
+    Ok(())
 }
 
-fn resolve_block(b: Block, env: &mut Env, labelmap: &mut Env) -> Result<Block, SemanticError> {
+fn resolve_block(b: &mut Block, env: &mut Env, labelmap: &mut Env) -> Result<(), SemanticError> {
     let Block::Block(body) = b;
 
-    let mut r_body = Vec::new();
     for b in body {
-        r_body.push(resolve_block_item(b, env, labelmap)?);
+        resolve_block_item(b, env, labelmap)?;
     }
 
-    Ok(Block::Block(r_body))
+    Ok(())
 }
 
 fn resolve_block_item(
-    b: BlockItem,
+    b: &mut BlockItem,
     varenv: &mut Env,
     labelenv: &mut Env,
-) -> Result<BlockItem, SemanticError> {
+) -> Result<(), SemanticError> {
     match b {
-        BlockItem::Statement(s) => Ok(BlockItem::Statement(resolve_statement(
-            s, varenv, labelenv,
-        )?)),
+        BlockItem::Statement(s) => resolve_statement(s, varenv, labelenv)?,
         BlockItem::Declaration(declaration) => match declaration {
             Declaration::Declaration(Identifier(s), exp) => {
                 if varenv.contains_current(&s) {
@@ -62,117 +59,101 @@ fn resolve_block_item(
                 let name = make_temporary(&format!("var.{}", &s));
                 varenv.set(s.clone(), name.clone());
 
-                let exp = if let Some(exp) = exp {
-                    Some(resolve_exp(exp, varenv)?)
-                } else {
-                    None
-                };
+                *s = name;
 
-                Ok(BlockItem::Declaration(Declaration::Declaration(
-                    Identifier(name),
-                    exp,
-                )))
+                if let Some(exp) = exp {
+                    resolve_exp(exp, varenv)?;
+                };
             }
         },
-    }
+    };
+
+    Ok(())
 }
 
 fn resolve_statement(
-    s: Statement,
+    s: &mut Statement,
     varenv: &mut Env,
     labelenv: &mut Env,
-) -> Result<Statement, SemanticError> {
+) -> Result<(), SemanticError> {
     match s {
-        Statement::Return(e) => Ok(Statement::Return(resolve_exp(e, varenv)?)),
-        Statement::Expression(e) => Ok(Statement::Expression(resolve_exp(e, varenv)?)),
-        Statement::Null => Ok(Statement::Null),
+        Statement::Return(e) => resolve_exp(e, varenv)?,
+        Statement::Expression(e) => resolve_exp(e, varenv)?,
         Statement::If(cond, then, el) => {
-            let cond = resolve_exp(cond, varenv)?;
-            let then = resolve_statement(*then, &mut varenv.extend(), labelenv)?;
+            resolve_exp(cond, varenv)?;
+            resolve_statement(then, &mut varenv.extend(), labelenv)?;
             if let Some(el) = el {
-                let el = resolve_statement(*el, &mut varenv.extend(), labelenv)?;
-                Ok(Statement::If(cond, Box::new(then), Some(Box::new(el))))
-            } else {
-                Ok(Statement::If(cond, Box::new(then), None))
-            }
+                resolve_statement(el, &mut varenv.extend(), labelenv)?;
+            };
         }
-        Statement::Goto(id) => Ok(Statement::Goto(id)),
         Statement::Label(id, ls) => {
             if labelenv.contains(&id.0) {
                 return Err(SemanticError(format!("duplicated label {}", &id.0)));
             }
 
             if let Some(s) = labelenv.get(&id.0) {
-                Ok(Statement::Label(Identifier(s.clone()), ls))
+                *id = Identifier(s.clone());
             } else {
                 let name = make_temporary(&format!("lbl.{}", &id.0));
-                labelenv.set(id.0, name.clone());
+                labelenv.set(id.0.clone(), name.clone());
 
-                Ok(Statement::Label(
-                    Identifier(name),
-                    Box::new(resolve_statement(*ls, varenv, labelenv)?),
-                ))
+                *id = Identifier(name);
+
+                resolve_statement(ls, varenv, labelenv)?;
             }
         }
-        Statement::Compound(b) => Ok(Statement::Compound(resolve_block(
-            b,
-            &mut varenv.extend(),
-            labelenv,
-        )?)),
+        Statement::Compound(b) => resolve_block(b, &mut varenv.extend(), labelenv)?,
+        _ => {}
     }
+
+    Ok(())
 }
 
-fn resolve_exp(exp: Expression, varenv: &Env) -> Result<Expression, SemanticError> {
+fn resolve_exp(exp: &mut Expression, varenv: &Env) -> Result<(), SemanticError> {
     match exp {
         Expression::Var(Identifier(s)) => {
             if let Some(v) = varenv.get(&s) {
-                Ok(Expression::Var(Identifier(v.clone())))
+                *s = v.to_string();
             } else {
-                Err(SemanticError("Undeclared variable".to_string()))
+                return Err(SemanticError("Undeclared variable".to_string()));
             }
         }
-        Expression::Assignment(op, e1, e2) => match *e1 {
-            Expression::Var(_) => Ok(Expression::Assignment(
-                op,
-                Box::new(resolve_exp(*e1, varenv)?),
-                Box::new(resolve_exp(*e2, varenv)?),
-            )),
-            _ => Err(SemanticError("Invalid lvalue".to_string())),
+        Expression::Assignment(_op, e1, e2) => match e1.as_ref() {
+            Expression::Var(_) => {
+                resolve_exp(e1, varenv)?;
+                resolve_exp(e2, varenv)?;
+            }
+            _ => return Err(SemanticError("Invalid lvalue".to_string())),
         },
         Expression::Unary(op, e)
-            if op == UnaryOperator::IncrementPrefix
-                || op == UnaryOperator::IncrementPostfix
-                || op == UnaryOperator::DecrementPrefix
-                || op == UnaryOperator::DecrementPostfix =>
+            if *op == UnaryOperator::IncrementPrefix
+                || *op == UnaryOperator::IncrementPostfix
+                || *op == UnaryOperator::DecrementPrefix
+                || *op == UnaryOperator::DecrementPostfix =>
         {
             // 識別子のみに適用できる
-            match *e {
-                Expression::Var(_) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?))),
-                Expression::Unary(UnaryOperator::Complement, _) => {
-                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?)))
-                }
-                Expression::Unary(UnaryOperator::Not, _) => {
-                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?)))
-                }
-                Expression::Unary(UnaryOperator::Negate, _) => {
-                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?)))
-                }
-                _ => Err(SemanticError("Invalid lvalue".to_string())),
+            match e.as_ref() {
+                Expression::Var(_) => resolve_exp(e, varenv)?,
+                Expression::Unary(UnaryOperator::Complement, _) => resolve_exp(e, varenv)?,
+                Expression::Unary(UnaryOperator::Not, _) => resolve_exp(e, varenv)?,
+                Expression::Unary(UnaryOperator::Negate, _) => resolve_exp(e, varenv)?,
+                _ => return Err(SemanticError("Invalid lvalue".to_string())),
             }
         }
-        Expression::Unary(op, e) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?))),
-        Expression::Binary(op, e1, e2) => Ok(Expression::Binary(
-            op,
-            Box::new(resolve_exp(*e1, varenv)?),
-            Box::new(resolve_exp(*e2, varenv)?),
-        )),
-        Expression::Conditional(cond, e1, e2) => Ok(Expression::Conditional(
-            Box::new(resolve_exp(*cond, varenv)?),
-            Box::new(resolve_exp(*e1, varenv)?),
-            Box::new(resolve_exp(*e2, varenv)?),
-        )),
-        _ => Ok(exp),
-    }
+        Expression::Unary(_op, e) => resolve_exp(e, varenv)?,
+        Expression::Binary(_op, e1, e2) => {
+            resolve_exp(e1, varenv)?;
+            resolve_exp(e2, varenv)?;
+        }
+        Expression::Conditional(cond, e1, e2) => {
+            resolve_exp(cond, varenv)?;
+            resolve_exp(e1, varenv)?;
+            resolve_exp(e2, varenv)?;
+        }
+        _ => {}
+    };
+
+    Ok(())
 }
 
 fn make_temporary(prefix: &String) -> String {

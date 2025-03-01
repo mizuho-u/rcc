@@ -38,13 +38,13 @@ fn main() {
         return;
     }
 
-    let p = parse::parse(&mut ts).unwrap_or_else(|_| exit(1));
+    let mut p = parse::parse(&mut ts).unwrap_or_else(|_| exit(1));
 
     if matches!(args.parse, Some(true)) {
         return;
     }
 
-    let p = parse::validate(p).unwrap_or_else(|_| exit(1));
+    parse::validate(&mut p).unwrap_or_else(|_| exit(1));
 
     if matches!(args.validate, Some(true)) {
         return;

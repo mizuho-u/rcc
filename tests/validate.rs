@@ -108,12 +108,6 @@ fn undeclared_value() {
     tokenize_to_validate("int main(void) { return a; }");
 }
 
-fn tokenize_to_validate(p: &str) -> Program {
-    let mut result = token::tokenize(p.into()).unwrap();
-    let result = parse(&mut result).unwrap();
-    validate(result).unwrap()
-}
-
 #[should_panic]
 #[test]
 fn duplicate_goto_label() {
@@ -139,4 +133,12 @@ fn same_var_name_in_different_block() {
 #[test]
 fn same_var_name_in_same_block() {
     tokenize_to_validate(" int main(void) { int a; int a; return a; } ");
+}
+
+fn tokenize_to_validate(p: &str) -> Program {
+    let mut result = token::tokenize(p.into()).unwrap();
+    let mut result = parse(&mut result).unwrap();
+    validate(&mut result).unwrap();
+
+    result
 }
