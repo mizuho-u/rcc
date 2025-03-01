@@ -1,9 +1,8 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 
 use super::{
-    label::validate_label, Block, BlockItem, Declaration, Expression, Function, Identifier,
-    Program, Statement, UnaryOperator,
+    env::Env, label::validate_label, Block, BlockItem, Declaration, Expression, Function,
+    Identifier, Program, Statement, UnaryOperator,
 };
 
 #[derive(Debug)]
@@ -22,44 +21,49 @@ impl From<String> for SemanticError {
 }
 
 pub fn validate(p: Program) -> Result<Program, SemanticError> {
-    let mut var: HashMap<String, String> = HashMap::new();
-    let mut label: HashMap<String, String> = HashMap::new();
+    let mut var = Env::new();
+    let mut label = Env::new();
 
     let Program::Program(Function::Function(id, Block::Block(body))) = p;
 
+    let mut block = resolve_block(Block::Block(body), &mut var, &mut label)?;
+
+    validate_label(&mut block, &label)?;
+
+    Ok(Program::Program(Function::Function(id, block)))
+}
+
+fn resolve_block(b: Block, env: &mut Env, labelmap: &mut Env) -> Result<Block, SemanticError> {
+    let Block::Block(body) = b;
+
     let mut r_body = Vec::new();
     for b in body {
-        r_body.push(resolve_block_item(b, &mut var, &mut label)?);
+        r_body.push(resolve_block_item(b, env, labelmap)?);
     }
 
-    validate_label(&mut r_body, &label)?;
-
-    Ok(Program::Program(Function::Function(
-        id,
-        Block::Block(r_body),
-    )))
+    Ok(Block::Block(r_body))
 }
 
 fn resolve_block_item(
     b: BlockItem,
-    varmap: &mut HashMap<String, String>,
-    labelmap: &mut HashMap<String, String>,
+    varenv: &mut Env,
+    labelenv: &mut Env,
 ) -> Result<BlockItem, SemanticError> {
     match b {
         BlockItem::Statement(s) => Ok(BlockItem::Statement(resolve_statement(
-            s, varmap, labelmap,
+            s, varenv, labelenv,
         )?)),
         BlockItem::Declaration(declaration) => match declaration {
             Declaration::Declaration(Identifier(s), exp) => {
-                if varmap.contains_key(&s) {
+                if varenv.contains_current(&s) {
                     return Err(SemanticError("Duplicate variable declaration".to_string()));
                 }
 
                 let name = make_temporary(&format!("var.{}", &s));
-                varmap.insert(s.clone(), name.clone());
+                varenv.set(s.clone(), name.clone());
 
                 let exp = if let Some(exp) = exp {
-                    Some(resolve_exp(exp, varmap)?)
+                    Some(resolve_exp(exp, varenv)?)
                 } else {
                     None
                 };
@@ -75,18 +79,18 @@ fn resolve_block_item(
 
 fn resolve_statement(
     s: Statement,
-    varmap: &mut HashMap<String, String>,
-    labelmap: &mut HashMap<String, String>,
+    varenv: &mut Env,
+    labelenv: &mut Env,
 ) -> Result<Statement, SemanticError> {
     match s {
-        Statement::Return(e) => Ok(Statement::Return(resolve_exp(e, varmap)?)),
-        Statement::Expression(e) => Ok(Statement::Expression(resolve_exp(e, varmap)?)),
+        Statement::Return(e) => Ok(Statement::Return(resolve_exp(e, varenv)?)),
+        Statement::Expression(e) => Ok(Statement::Expression(resolve_exp(e, varenv)?)),
         Statement::Null => Ok(Statement::Null),
         Statement::If(cond, then, el) => {
-            let cond = resolve_exp(cond, varmap)?;
-            let then = resolve_statement(*then, varmap, labelmap)?;
+            let cond = resolve_exp(cond, varenv)?;
+            let then = resolve_statement(*then, &mut varenv.extend(), labelenv)?;
             if let Some(el) = el {
-                let el = resolve_statement(*el, varmap, labelmap)?;
+                let el = resolve_statement(*el, &mut varenv.extend(), labelenv)?;
                 Ok(Statement::If(cond, Box::new(then), Some(Box::new(el))))
             } else {
                 Ok(Statement::If(cond, Box::new(then), None))
@@ -94,29 +98,34 @@ fn resolve_statement(
         }
         Statement::Goto(id) => Ok(Statement::Goto(id)),
         Statement::Label(id, ls) => {
-            if let Some(s) = labelmap.get(&id.0) {
+            if labelenv.contains(&id.0) {
+                return Err(SemanticError(format!("duplicated label {}", &id.0)));
+            }
+
+            if let Some(s) = labelenv.get(&id.0) {
                 Ok(Statement::Label(Identifier(s.clone()), ls))
             } else {
                 let name = make_temporary(&format!("lbl.{}", &id.0));
-                labelmap.insert(id.0, name.clone());
+                labelenv.set(id.0, name.clone());
 
                 Ok(Statement::Label(
                     Identifier(name),
-                    Box::new(resolve_statement(*ls, varmap, labelmap)?),
+                    Box::new(resolve_statement(*ls, varenv, labelenv)?),
                 ))
             }
         }
-        Statement::Compound(block) => todo!(),
+        Statement::Compound(b) => Ok(Statement::Compound(resolve_block(
+            b,
+            &mut varenv.extend(),
+            labelenv,
+        )?)),
     }
 }
 
-fn resolve_exp(
-    exp: Expression,
-    varmap: &HashMap<String, String>,
-) -> Result<Expression, SemanticError> {
+fn resolve_exp(exp: Expression, varenv: &Env) -> Result<Expression, SemanticError> {
     match exp {
         Expression::Var(Identifier(s)) => {
-            if let Some(v) = varmap.get(&s) {
+            if let Some(v) = varenv.get(&s) {
                 Ok(Expression::Var(Identifier(v.clone())))
             } else {
                 Err(SemanticError("Undeclared variable".to_string()))
@@ -125,8 +134,8 @@ fn resolve_exp(
         Expression::Assignment(op, e1, e2) => match *e1 {
             Expression::Var(_) => Ok(Expression::Assignment(
                 op,
-                Box::new(resolve_exp(*e1, varmap)?),
-                Box::new(resolve_exp(*e2, varmap)?),
+                Box::new(resolve_exp(*e1, varenv)?),
+                Box::new(resolve_exp(*e2, varenv)?),
             )),
             _ => Err(SemanticError("Invalid lvalue".to_string())),
         },
@@ -138,29 +147,29 @@ fn resolve_exp(
         {
             // 識別子のみに適用できる
             match *e {
-                Expression::Var(_) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?))),
+                Expression::Var(_) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?))),
                 Expression::Unary(UnaryOperator::Complement, _) => {
-                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?)))
+                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?)))
                 }
                 Expression::Unary(UnaryOperator::Not, _) => {
-                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?)))
+                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?)))
                 }
                 Expression::Unary(UnaryOperator::Negate, _) => {
-                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?)))
+                    Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?)))
                 }
                 _ => Err(SemanticError("Invalid lvalue".to_string())),
             }
         }
-        Expression::Unary(op, e) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varmap)?))),
+        Expression::Unary(op, e) => Ok(Expression::Unary(op, Box::new(resolve_exp(*e, varenv)?))),
         Expression::Binary(op, e1, e2) => Ok(Expression::Binary(
             op,
-            Box::new(resolve_exp(*e1, varmap)?),
-            Box::new(resolve_exp(*e2, varmap)?),
+            Box::new(resolve_exp(*e1, varenv)?),
+            Box::new(resolve_exp(*e2, varenv)?),
         )),
         Expression::Conditional(cond, e1, e2) => Ok(Expression::Conditional(
-            Box::new(resolve_exp(*cond, varmap)?),
-            Box::new(resolve_exp(*e1, varmap)?),
-            Box::new(resolve_exp(*e2, varmap)?),
+            Box::new(resolve_exp(*cond, varenv)?),
+            Box::new(resolve_exp(*e1, varenv)?),
+            Box::new(resolve_exp(*e2, varenv)?),
         )),
         _ => Ok(exp),
     }

@@ -1,37 +1,14 @@
-use std::collections::HashMap;
-
 use super::validate::SemanticError;
-use super::{BlockItem, Identifier, Statement};
+use super::{env::Env, Block, BlockItem, Identifier, Statement};
 
-pub fn validate_label(
-    body: &mut Vec<BlockItem>,
-    labelmap: &HashMap<String, String>,
-) -> Result<(), SemanticError> {
-    let mut check: HashMap<String, bool> = HashMap::new();
-
-    for b in body {
-        if let BlockItem::Statement(s) = b {
-            resolve_statement_item(s, labelmap, &mut check)?;
-        }
-    }
-
-    Ok(())
+pub fn validate_label(body: &mut Block, labelmap: &Env) -> Result<(), SemanticError> {
+    resolve_block(body, labelmap)
 }
 
-fn resolve_statement_item(
-    s: &mut Statement,
-    labelmap: &HashMap<String, String>,
-    check: &mut HashMap<String, bool>,
-) -> Result<(), SemanticError> {
+fn resolve_statement_item(s: &mut Statement, labelmap: &Env) -> Result<(), SemanticError> {
     match s {
-        Statement::Label(id, ls) => {
-            if let Some(_) = check.get(&id.0) {
-                return Err(SemanticError(format!("duplicated label {}", &id.0)));
-            } else {
-                check.insert(id.0.clone(), true);
-            }
-
-            resolve_statement_item(ls, labelmap, check)?;
+        Statement::Label(_id, ls) => {
+            resolve_statement_item(ls, labelmap)?;
 
             Ok(())
         }
@@ -44,14 +21,27 @@ fn resolve_statement_item(
             }
         }
         Statement::If(_, then, el) => {
-            resolve_statement_item(then, labelmap, check)?;
+            resolve_statement_item(then, labelmap)?;
 
             if let Some(el) = el {
-                resolve_statement_item(el, labelmap, check)?;
+                resolve_statement_item(el, labelmap)?;
             }
 
             Ok(())
         }
+        Statement::Compound(b) => resolve_block(b, labelmap),
         _ => Ok(()),
     }
+}
+
+fn resolve_block(b: &mut Block, labelmap: &Env) -> Result<(), SemanticError> {
+    let Block::Block(body) = b;
+
+    for b in body {
+        if let BlockItem::Statement(s) = b {
+            resolve_statement_item(s, labelmap)?;
+        }
+    }
+
+    Ok(())
 }

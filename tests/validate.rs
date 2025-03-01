@@ -129,3 +129,14 @@ fn goto_undefined_label() {
         " int main(void) { goto label_b; int a = 1; label_a: int b = 2; return a; } ",
     );
 }
+
+#[test]
+fn same_var_name_in_different_block() {
+    tokenize_to_validate(" int main(void) { int a = 0; { int a = 0; } return a; } ");
+}
+
+#[should_panic]
+#[test]
+fn same_var_name_in_same_block() {
+    tokenize_to_validate(" int main(void) { int a; int a; return a; } ");
+}
