@@ -51,6 +51,11 @@ pub enum Token {
     QuestionMark,
     Colon,
     Goto,
+    Do,
+    While,
+    For,
+    Break,
+    Continue,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -69,14 +74,23 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
 
     let s = s.trim();
 
-    if let Some(t) = find_token(s, r"^(if|else|\?|\:|goto)", |c| match c {
-        "if" => Some(Token::If),
-        "else" => Some(Token::Else),
-        "?" => Some(Token::QuestionMark),
-        ":" => Some(Token::Colon),
-        "goto" => Some(Token::Goto),
-        _ => None,
-    }) {
+    if let Some(t) = find_token(
+        s,
+        r"^(if|else|\?|\:|goto|do|while|for|break|continue)",
+        |c| match c {
+            "if" => Some(Token::If),
+            "else" => Some(Token::Else),
+            "?" => Some(Token::QuestionMark),
+            ":" => Some(Token::Colon),
+            "goto" => Some(Token::Goto),
+            "do" => Some(Token::Do),
+            "while" => Some(Token::While),
+            "for" => Some(Token::For),
+            "break" => Some(Token::Break),
+            "continue" => Some(Token::Continue),
+            _ => None,
+        },
+    ) {
         ts.push(t.0);
         return _tokenize(&s[t.1..], ts);
     }

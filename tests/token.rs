@@ -223,6 +223,21 @@ fn goto() {
 }
 
 #[test]
+fn loops() {
+    let result = token::tokenize(" do while for break continue ".into()).unwrap();
+    assert_eq!(
+        result,
+        vec![
+            Token::Do,
+            Token::While,
+            Token::For,
+            Token::Break,
+            Token::Continue
+        ]
+    )
+}
+
+#[test]
 #[should_panic]
 fn invalid_token() {
     token::tokenize(" 1foo ".into()).unwrap();
