@@ -30,6 +30,23 @@ pub enum Statement {
     Goto(Identifier),
     Label(Identifier, Box<Statement>),
     Compound(Block),
+    Break(Identifier),
+    Continue(Identifier),
+    While(Expression, Box<Statement>, Identifier),
+    DoWhile(Box<Statement>, Expression, Identifier),
+    For(
+        ForInit,
+        Option<Expression>,
+        Option<Expression>,
+        Box<Statement>,
+        Identifier,
+    ),
+}
+
+#[derive(PartialEq, Debug)]
+pub enum ForInit {
+    Declaration(Declaration),
+    Expression(Option<Expression>),
 }
 
 #[derive(PartialEq, Debug)]
@@ -97,6 +114,12 @@ pub enum BinaryOperator {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct Identifier(pub String);
+
+impl Identifier {
+    pub fn placeholder() -> Identifier {
+        Identifier("ph".to_string())
+    }
+}
 
 #[derive(Debug)]
 pub struct ParseError(String);
@@ -241,6 +264,87 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             }
         }
         Token::OpenBrace => Ok(Statement::Compound(parse_block(tokens)?)),
+        Token::Break => {
+            consume(tokens);
+            expect(tokens, Token::Semicolon)?;
+            Ok(Statement::Break(Identifier::placeholder()))
+        }
+        Token::Continue => {
+            consume(tokens);
+            expect(tokens, Token::Semicolon)?;
+            Ok(Statement::Continue(Identifier::placeholder()))
+        }
+        Token::While => {
+            consume(tokens);
+
+            expect(tokens, Token::OpenParen)?;
+            let cond = parse_exp(tokens, 0)?;
+            expect(tokens, Token::CloseParen)?;
+
+            Ok(Statement::While(
+                cond,
+                Box::new(parse_statement(tokens)?),
+                Identifier::placeholder(),
+            ))
+        }
+        Token::Do => {
+            consume(tokens);
+
+            let body = parse_statement(tokens)?;
+            expect(tokens, Token::While)?;
+
+            expect(tokens, Token::OpenParen)?;
+            let cond = parse_exp(tokens, 0)?;
+            expect(tokens, Token::CloseParen)?;
+
+            expect(tokens, Token::Semicolon)?;
+
+            Ok(Statement::DoWhile(
+                Box::new(body),
+                cond,
+                Identifier::placeholder(),
+            ))
+        }
+        Token::For => {
+            consume(tokens);
+            expect(tokens, Token::OpenParen)?;
+
+            let next = peek(tokens).expect("peek failed, no token left.");
+            let init = if *next == Token::Int {
+                ForInit::Declaration(parse_declaration(tokens)?)
+            } else if *next == Token::Semicolon {
+                consume(tokens);
+                ForInit::Expression(None)
+            } else {
+                let e = parse_exp(tokens, 0)?;
+                expect(tokens, Token::Semicolon)?;
+                ForInit::Expression(Some(e))
+            };
+
+            let next = peek(tokens).expect("peek failed, no token left.");
+            let cond = if *next == Token::Semicolon {
+                None
+            } else {
+                Some(parse_exp(tokens, 0)?)
+            };
+            expect(tokens, Token::Semicolon)?;
+
+            let next = peek(tokens).expect("peek failed, no token left.");
+            let post = if *next == Token::CloseParen {
+                None
+            } else {
+                Some(parse_exp(tokens, 0)?)
+            };
+            expect(tokens, Token::CloseParen)?;
+
+            Ok(Statement::For(
+                init,
+                cond,
+                post,
+                Box::new(parse_statement(tokens)?),
+                Identifier::placeholder(),
+            ))
+        }
         _ => Ok(parse_statement_expression(tokens)?),
     }
 }

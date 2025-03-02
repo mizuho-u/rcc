@@ -845,3 +845,444 @@ fn compound_if_statement() {
         result
     )
 }
+
+#[test]
+fn while_statement() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 0; while(a < 10) { a++; } return a; } ".into())
+            .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::While(
+                    Expression::Binary(
+                        BinaryOperator::LessThan,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                        Box::new(Expression::Constant(10))
+                    ),
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::Expression(Expression::Unary(
+                            UnaryOperator::IncrementPostfix,
+                            Box::new(Expression::Var(Identifier("a".to_string()))),
+                        )))
+                    ]))),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn while_no_statement() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 0; while(a < 10) ; return a; } ".into())
+            .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::While(
+                    Expression::Binary(
+                        BinaryOperator::LessThan,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                        Box::new(Expression::Constant(10))
+                    ),
+                    Box::new(Statement::Null),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn do_while() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 0; do a++; while(a < 10); return a; } ".into())
+            .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::DoWhile(
+                    Box::new(Statement::Expression(Expression::Unary(
+                        UnaryOperator::IncrementPostfix,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                    ))),
+                    Expression::Binary(
+                        BinaryOperator::LessThan,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                        Box::new(Expression::Constant(10))
+                    ),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn do_block_while() {
+    let mut result = token::tokenize(
+        " int main(void) { int a = 0; do { a++; } while(a < 10); return a; } ".into(),
+    )
+    .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::DoWhile(
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::Expression(Expression::Unary(
+                            UnaryOperator::IncrementPostfix,
+                            Box::new(Expression::Var(Identifier("a".to_string()))),
+                        ))),
+                    ]))),
+                    Expression::Binary(
+                        BinaryOperator::LessThan,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                        Box::new(Expression::Constant(10))
+                    ),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn for_init_declaration() {
+    let mut result =
+        token::tokenize(" int main(void) { for(int a = 0; a < 10; a++) ; return a; } ".into())
+            .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Statement(Statement::For(
+                    ForInit::Declaration(Declaration::Declaration(
+                        Identifier("a".to_string()),
+                        Some(Expression::Constant(0))
+                    )),
+                    Some(Expression::Binary(
+                        BinaryOperator::LessThan,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                        Box::new(Expression::Constant(10))
+                    )),
+                    Some(Expression::Unary(
+                        UnaryOperator::IncrementPostfix,
+                        Box::new(Expression::Var(Identifier("a".to_string())))
+                    )),
+                    Box::new(Statement::Null),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn for_init_expression() {
+    let mut result = token::tokenize(
+        " int main(void) { int a = 1; for(a = 0; a < 10; a++) ; return a; } ".into(),
+    )
+    .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(1))
+                )),
+                BlockItem::Statement(Statement::For(
+                    ForInit::Expression(Some(Expression::Assignment(
+                        AssignmentOperator::Simple,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                        Box::new(Expression::Constant(0))
+                    ))),
+                    Some(Expression::Binary(
+                        BinaryOperator::LessThan,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                        Box::new(Expression::Constant(10))
+                    )),
+                    Some(Expression::Unary(
+                        UnaryOperator::IncrementPostfix,
+                        Box::new(Expression::Var(Identifier("a".to_string())))
+                    )),
+                    Box::new(Statement::Null),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn for_no_init_cond_post() {
+    let mut result =
+        token::tokenize(" int main(void) { for(;;) break; return a; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Statement(Statement::For(
+                    ForInit::Expression(None),
+                    None,
+                    None,
+                    Box::new(Statement::Break(Identifier::placeholder())),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn for_block() {
+    let mut result =
+        token::tokenize(" int main(void) { int a = 0; for(;a < 10;) { a++; } return a; } ".into())
+            .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::For(
+                    ForInit::Expression(None),
+                    Some(Expression::Binary(
+                        BinaryOperator::LessThan,
+                        Box::new(Expression::Var(Identifier("a".to_string()))),
+                        Box::new(Expression::Constant(10))
+                    )),
+                    None,
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::Expression(Expression::Unary(
+                            UnaryOperator::IncrementPostfix,
+                            Box::new(Expression::Var(Identifier("a".to_string())))
+                        )))
+                    ]))),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn for_continue_break() {
+    let mut result = token::tokenize(
+        " int main(void) { int a = 0; for(;;a++) { if(a%2 == 0) continue; if(a == 10) break; } return a; } ".into(),
+    )
+    .unwrap();
+    let result = parse(&mut result).unwrap();
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::For(
+                    ForInit::Expression(None),
+                    None,
+                    Some(Expression::Unary(
+                        UnaryOperator::IncrementPostfix,
+                        Box::new(Expression::Var(Identifier("a".to_string())))
+                    )),
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::If(
+                            Expression::Binary(
+                                BinaryOperator::EqualTo,
+                                Box::new(Expression::Binary(
+                                    BinaryOperator::Remainder,
+                                    Box::new(Expression::Var(Identifier("a".to_string()))),
+                                    Box::new(Expression::Constant(2))
+                                )),
+                                Box::new(Expression::Constant(0))
+                            ),
+                            Box::new(Statement::Continue(Identifier::placeholder())),
+                            None
+                        )),
+                        BlockItem::Statement(Statement::If(
+                            Expression::Binary(
+                                BinaryOperator::EqualTo,
+                                Box::new(Expression::Var(Identifier("a".to_string()))),
+                                Box::new(Expression::Constant(10))
+                            ),
+                            Box::new(Statement::Break(Identifier::placeholder())),
+                            None
+                        ))
+                    ]))),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+// #[test]
+// fn a() {
+//     let mut result = token::tokenize(
+//         " int main(void) {
+//     int i = 1;
+//     do {
+//     while_start:
+//         i = i + 1;
+//         if (i < 10)
+//             goto while_start;
+
+//     } while (0);
+//     return i;
+// } "
+//         .into(),
+//     )
+//     .unwrap();
+
+//     dbg!(&result);
+//     let result = parse(&mut result).unwrap();
+
+//     assert_eq!(
+//         result,
+//         Program::Program(Function::Function(
+//             Identifier("main".to_string()),
+//             Block::Block(vec![
+//                 BlockItem::Declaration(Declaration::Declaration(
+//                     Identifier("a".to_string()),
+//                     Some(Expression::Constant(0))
+//                 )),
+//                 BlockItem::Statement(Statement::For(
+//                     ForInit::Expression(None),
+//                     None,
+//                     Some(Expression::Unary(
+//                         UnaryOperator::IncrementPostfix,
+//                         Box::new(Expression::Var(Identifier("a".to_string())))
+//                     )),
+//                     Box::new(Statement::Compound(Block::Block(vec![
+//                         BlockItem::Statement(Statement::If(
+//                             Expression::Binary(
+//                                 BinaryOperator::EqualTo,
+//                                 Box::new(Expression::Binary(
+//                                     BinaryOperator::Remainder,
+//                                     Box::new(Expression::Var(Identifier("a".to_string()))),
+//                                     Box::new(Expression::Constant(2))
+//                                 )),
+//                                 Box::new(Expression::Constant(0))
+//                             ),
+//                             Box::new(Statement::Continue(Identifier::placeholder())),
+//                             None
+//                         )),
+//                         BlockItem::Statement(Statement::If(
+//                             Expression::Binary(
+//                                 BinaryOperator::EqualTo,
+//                                 Box::new(Expression::Var(Identifier("a".to_string()))),
+//                                 Box::new(Expression::Constant(10))
+//                             ),
+//                             Box::new(Statement::Break(Identifier::placeholder())),
+//                             None
+//                         ))
+//                     ]))),
+//                     Identifier::placeholder()
+//                 )),
+//                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+//                     "a".to_string()
+//                 ))))
+//             ])
+//         )),
+//         "{:#?}",
+//         result
+//     )
+// }

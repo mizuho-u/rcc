@@ -196,6 +196,11 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             instructions.append(&mut convert_statement(*s)?);
         }
         parse::Statement::Compound(b) => instructions.append(&mut convert_block(b)?),
+        parse::Statement::Break(identifier) => todo!(),
+        parse::Statement::Continue(identifier) => todo!(),
+        parse::Statement::While(expression, statement, identifier) => todo!(),
+        parse::Statement::DoWhile(statement, expression, identifier) => todo!(),
+        parse::Statement::For(for_init, expression, expression1, statement, identifier) => todo!(),
     }
 
     Ok(instructions)
