@@ -1,5 +1,5 @@
 mod env;
-mod label;
+mod goto_label;
 pub mod parser;
 mod validate;
 

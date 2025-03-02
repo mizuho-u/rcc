@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use super::{
-    env::Env, label::validate_label, Block, BlockItem, Declaration, Expression, Function,
+    env::Env, goto_label::validate_label, Block, BlockItem, Declaration, Expression, Function,
     Identifier, Program, Statement, UnaryOperator,
 };
 
