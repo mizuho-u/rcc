@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 
 use super::{
-    env::Env, goto_label::validate_label, Block, BlockItem, Declaration, Expression, Function,
-    Identifier, Program, Statement, UnaryOperator,
+    env::Env, goto_label::validate_label, loop_label::validate_loop, Block, BlockItem, Declaration,
+    Expression, Function, Identifier, Program, Statement, UnaryOperator,
 };
 
 #[derive(Debug)]
@@ -30,6 +30,8 @@ pub fn validate(p: &mut Program) -> Result<(), SemanticError> {
 
     validate_label(b, &label)?;
 
+    validate_loop(b)?;
+
     Ok(())
 }
 
@@ -50,23 +52,29 @@ fn resolve_block_item(
 ) -> Result<(), SemanticError> {
     match b {
         BlockItem::Statement(s) => resolve_statement(s, varenv, labelenv)?,
-        BlockItem::Declaration(declaration) => match declaration {
-            Declaration::Declaration(Identifier(s), exp) => {
-                if varenv.contains_current(&s) {
-                    return Err(SemanticError("Duplicate variable declaration".to_string()));
-                }
-
-                let name = make_temporary(&format!("var.{}", &s));
-                varenv.set(s.clone(), name.clone());
-
-                *s = name;
-
-                if let Some(exp) = exp {
-                    resolve_exp(exp, varenv)?;
-                };
-            }
-        },
+        BlockItem::Declaration(d) => resolve_declaration(d, varenv)?,
     };
+
+    Ok(())
+}
+
+fn resolve_declaration(d: &mut Declaration, varenv: &mut Env) -> Result<(), SemanticError> {
+    match d {
+        Declaration::Declaration(Identifier(s), exp) => {
+            if varenv.contains_current(&s) {
+                return Err(SemanticError("Duplicate variable declaration".to_string()));
+            }
+
+            let name = make_temporary(&format!("var.{}", &s));
+            varenv.set(s.clone(), name.clone());
+
+            *s = name;
+
+            if let Some(exp) = exp {
+                resolve_exp(exp, varenv)?;
+            };
+        }
+    }
 
     Ok(())
 }
@@ -103,6 +111,33 @@ fn resolve_statement(
             }
         }
         Statement::Compound(b) => resolve_block(b, &mut varenv.extend(), labelenv)?,
+        Statement::While(cond, body, _id) => {
+            resolve_exp(cond, varenv)?;
+            resolve_statement(body, varenv, labelenv)?;
+        }
+        Statement::DoWhile(body, cond, _id) => {
+            resolve_statement(body, varenv, labelenv)?;
+            resolve_exp(cond, varenv)?;
+        }
+        Statement::For(init, cond, post, body, _id) => {
+            let mut varenv = varenv.extend();
+
+            match init {
+                super::ForInit::Declaration(d) => resolve_declaration(d, &mut varenv)?,
+                super::ForInit::Expression(Some(e)) => resolve_exp(e, &varenv)?,
+                _ => {}
+            };
+
+            if let Some(cond) = cond {
+                resolve_exp(cond, &varenv)?;
+            };
+
+            if let Some(post) = post {
+                resolve_exp(post, &varenv)?;
+            };
+
+            resolve_statement(body, &mut varenv, labelenv)?;
+        }
         _ => {}
     }
 
@@ -156,7 +191,7 @@ fn resolve_exp(exp: &mut Expression, varenv: &Env) -> Result<(), SemanticError> 
     Ok(())
 }
 
-fn make_temporary(prefix: &String) -> String {
+pub fn make_temporary(prefix: &String) -> String {
     thread_local!(
         pub static LABEL_COUNT: RefCell<i32> = RefCell::new(0)
     );

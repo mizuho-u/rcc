@@ -111,9 +111,7 @@ fn undeclared_value() {
 #[should_panic]
 #[test]
 fn duplicate_goto_label() {
-    let res =
-        tokenize_to_validate(" int main(void) { int a = 1; label_a: a = 2; label_a: return a; } ");
-    dbg!(res);
+    tokenize_to_validate(" int main(void) { int a = 1; label_a: a = 2; label_a: return a; } ");
 }
 
 #[should_panic]
@@ -133,6 +131,142 @@ fn same_var_name_in_different_block() {
 #[test]
 fn same_var_name_in_same_block() {
     tokenize_to_validate(" int main(void) { int a; int a; return a; } ");
+}
+
+#[test]
+fn for_loop_labeling() {
+    let result = tokenize_to_validate(" int main(void) { for(;;) break; return 1; }");
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Statement(Statement::For(
+                    ForInit::Expression(None),
+                    None,
+                    None,
+                    Box::new(Statement::Break(Identifier("for.1".to_string()))),
+                    Identifier("for.1".to_string())
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Constant(1)))
+            ])
+        ))
+    )
+}
+
+#[test]
+fn while_loop_labeling() {
+    let result = tokenize_to_validate(" int main(void) { while(1) continue; return 1; }");
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Statement(Statement::While(
+                    Expression::Constant(1),
+                    Box::new(Statement::Continue(Identifier("while.1".to_string()))),
+                    Identifier("while.1".to_string())
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Constant(1)))
+            ])
+        ))
+    )
+}
+
+#[test]
+fn do_while_loop_labeling() {
+    let result = tokenize_to_validate(" int main(void) { int a = 0; do { if(a == 2) continue; if(a == 5) break; } while(a < 10); return 1; }");
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("var.a.1".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::DoWhile(
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::If(
+                            Expression::Binary(
+                                BinaryOperator::EqualTo,
+                                Box::new(Expression::Var(Identifier("var.a.1".to_string()))),
+                                Box::new(Expression::Constant(2))
+                            ),
+                            Box::new(Statement::Continue(Identifier("dowhile.2".to_string()))),
+                            None
+                        )),
+                        BlockItem::Statement(Statement::If(
+                            Expression::Binary(
+                                BinaryOperator::EqualTo,
+                                Box::new(Expression::Var(Identifier("var.a.1".to_string()))),
+                                Box::new(Expression::Constant(5))
+                            ),
+                            Box::new(Statement::Break(Identifier("dowhile.2".to_string()))),
+                            None
+                        ))
+                    ]))),
+                    Expression::Binary(
+                        BinaryOperator::LessThan,
+                        Box::new(Expression::Var(Identifier("var.a.1".to_string()))),
+                        Box::new(Expression::Constant(10))
+                    ),
+                    Identifier("dowhile.2".to_string())
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Constant(1)))
+            ])
+        ))
+    )
+}
+
+#[test]
+fn nested_loop_labeling() {
+    let result = tokenize_to_validate(
+        " int main(void) { for(;;) { while(0) { continue; } break; } return 1; }",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Statement(Statement::For(
+                    ForInit::Expression(None),
+                    None,
+                    None,
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::While(
+                            Expression::Constant(0),
+                            Box::new(Statement::Compound(Block::Block(vec![
+                                BlockItem::Statement(Statement::Continue(Identifier(
+                                    "while.2".to_string()
+                                ))),
+                            ]))),
+                            Identifier("while.2".to_string())
+                        )),
+                        BlockItem::Statement(Statement::Break(Identifier("for.1".to_string())))
+                    ]))),
+                    Identifier("for.1".to_string())
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Constant(1)))
+            ])
+        ))
+    )
+}
+
+#[should_panic]
+#[test]
+fn break_statement_outside_loop() {
+    tokenize_to_validate(" int main(void) { break; return 1; } ");
+}
+
+#[should_panic]
+#[test]
+fn continue_statement_outside_loop() {
+    tokenize_to_validate(" int main(void) { continue; while(0); return 1; } ");
 }
 
 fn tokenize_to_validate(p: &str) -> Program {
