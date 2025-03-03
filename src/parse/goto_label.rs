@@ -5,10 +5,10 @@ pub fn validate_label(body: &mut Block, labelmap: &Env) -> Result<(), SemanticEr
     resolve_block(body, labelmap)
 }
 
-fn resolve_statement_item(s: &mut Statement, labelmap: &Env) -> Result<(), SemanticError> {
+fn resolve_statement(s: &mut Statement, labelmap: &Env) -> Result<(), SemanticError> {
     match s {
         Statement::Label(_id, ls) => {
-            resolve_statement_item(ls, labelmap)?;
+            resolve_statement(ls, labelmap)?;
 
             Ok(())
         }
@@ -21,15 +21,18 @@ fn resolve_statement_item(s: &mut Statement, labelmap: &Env) -> Result<(), Seman
             }
         }
         Statement::If(_, then, el) => {
-            resolve_statement_item(then, labelmap)?;
+            resolve_statement(then, labelmap)?;
 
             if let Some(el) = el {
-                resolve_statement_item(el, labelmap)?;
+                resolve_statement(el, labelmap)?;
             }
 
             Ok(())
         }
         Statement::Compound(b) => resolve_block(b, labelmap),
+        Statement::While(_cond, body, _id) => resolve_statement(body, labelmap),
+        Statement::DoWhile(body, _cond, _id) => resolve_statement(body, labelmap),
+        Statement::For(_init, _cond, _post, body, _id) => resolve_statement(body, labelmap),
         _ => Ok(()),
     }
 }
@@ -39,7 +42,7 @@ fn resolve_block(b: &mut Block, labelmap: &Env) -> Result<(), SemanticError> {
 
     for b in body {
         if let BlockItem::Statement(s) = b {
-            resolve_statement_item(s, labelmap)?;
+            resolve_statement(s, labelmap)?;
         }
     }
 

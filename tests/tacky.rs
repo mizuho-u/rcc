@@ -482,6 +482,253 @@ fn goto() {
     )
 }
 
+#[test]
+fn for_loop() {
+    let result = tokenize_to_convert(
+        " int main(void) { int a = 0; for( int b = 0; b < 10; b++ ) { if(a == 6) continue; a += 2; } return a; } ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.b.2".to_string())),
+                ),
+                Instruction::Label(Identifier("start.for.3".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::LessThan,
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Constant(10),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::JumpIfZero(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Identifier("break.for.3".to_string())
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Equal,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(6),
+                    Val::Var(Identifier("tmp.2".to_string())),
+                ),
+                Instruction::JumpIfZero(
+                    Val::Var(Identifier("tmp.2".to_string())),
+                    Identifier("endif.1".to_string())
+                ),
+                Instruction::Jump(Identifier("continue.for.3".to_string())),
+                Instruction::Label(Identifier("endif.1".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(2),
+                    Val::Var(Identifier("tmp.3".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.3".to_string())),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Label(Identifier("continue.for.3".to_string())),
+                Instruction::Copy(
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Var(Identifier("tmp.4".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.b.2".to_string())),
+                ),
+                Instruction::Jump(Identifier("start.for.3".to_string())),
+                Instruction::Label(Identifier("break.for.3".to_string())),
+                tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn while_loop() {
+    let result = tokenize_to_convert(
+        " int main(void) { int a = 0; while(a < 10) { a++; if(a == 5) break; } return a; } ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Label(Identifier("continue.while.2".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::LessThan,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(10),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::JumpIfZero(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Identifier("break.while.2".to_string())
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Var(Identifier("tmp.2".to_string()))
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Equal,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(5),
+                    Val::Var(Identifier("tmp.3".to_string())),
+                ),
+                Instruction::JumpIfZero(
+                    Val::Var(Identifier("tmp.3".to_string())),
+                    Identifier("endif.1".to_string())
+                ),
+                Instruction::Jump(Identifier("break.while.2".to_string())),
+                Instruction::Label(Identifier("endif.1".to_string())),
+                Instruction::Jump(Identifier("continue.while.2".to_string())),
+                Instruction::Label(Identifier("break.while.2".to_string())),
+                tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn do_while_loop() {
+    let result =
+        tokenize_to_convert(" int main(void) { int a = 0; do { a++; } while(a < 10); return a; } ");
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Label(Identifier("start.dowhile.2".to_string())),
+                Instruction::Copy(
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Label(Identifier("continue.dowhile.2".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::LessThan,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(10),
+                    Val::Var(Identifier("tmp.2".to_string())),
+                ),
+                Instruction::JumpIfNotZero(
+                    Val::Var(Identifier("tmp.2".to_string())),
+                    Identifier("start.dowhile.2".to_string())
+                ),
+                Instruction::Label(Identifier("break.dowhile.2".to_string())),
+                tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn nested_while_loop() {
+    let result = tokenize_to_convert(" int main(void) { int a = 0; while(a < 10) { int b = 0; while(b < 10) { b++; } a++; } return a; } ");
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Label(Identifier("continue.while.3".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::LessThan,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(10),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::JumpIfZero(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Identifier("break.while.3".to_string())
+                ),
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.b.2".to_string())),
+                ),
+                Instruction::Label(Identifier("continue.while.4".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::LessThan,
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Constant(10),
+                    Val::Var(Identifier("tmp.2".to_string())),
+                ),
+                Instruction::JumpIfZero(
+                    Val::Var(Identifier("tmp.2".to_string())),
+                    Identifier("break.while.4".to_string())
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Var(Identifier("tmp.3".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.b.2".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.b.2".to_string())),
+                ),
+                Instruction::Jump(Identifier("continue.while.4".to_string())),
+                Instruction::Label(Identifier("break.while.4".to_string())),
+                Instruction::Copy(
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Var(Identifier("tmp.4".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Jump(Identifier("continue.while.3".to_string())),
+                Instruction::Label(Identifier("break.while.3".to_string())),
+                tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
 fn tokenize_to_convert(p: &str) -> tacky::Program {
     let mut result = token::tokenize(p.into()).unwrap();
     let mut result = parse(&mut result).unwrap();

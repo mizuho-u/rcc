@@ -196,11 +196,70 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             instructions.append(&mut convert_statement(*s)?);
         }
         parse::Statement::Compound(b) => instructions.append(&mut convert_block(b)?),
-        parse::Statement::Break(identifier) => todo!(),
-        parse::Statement::Continue(identifier) => todo!(),
-        parse::Statement::While(expression, statement, identifier) => todo!(),
-        parse::Statement::DoWhile(statement, expression, identifier) => todo!(),
-        parse::Statement::For(for_init, expression, expression1, statement, identifier) => todo!(),
+        parse::Statement::Break(parse::Identifier(s)) => {
+            instructions.push(Instruction::Jump(Identifier(format!("break.{}", s))))
+        }
+        parse::Statement::Continue(parse::Identifier(s)) => {
+            instructions.push(Instruction::Jump(Identifier(format!("continue.{}", s))))
+        }
+        parse::Statement::While(cond, body, parse::Identifier(s)) => {
+            let continue_label = Identifier(format!("continue.{}", s));
+            let break_label = Identifier(format!("break.{}", s));
+
+            instructions.push(Instruction::Label(continue_label.clone()));
+            let v = convert_exp(cond, &mut instructions)?;
+            instructions.push(Instruction::JumpIfZero(v, break_label.clone()));
+            instructions.append(&mut convert_statement(*body)?);
+            instructions.push(Instruction::Jump(continue_label));
+            instructions.push(Instruction::Label(break_label));
+        }
+        parse::Statement::DoWhile(body, cond, parse::Identifier(s)) => {
+            let start_label = Identifier(format!("start.{}", s));
+            let continue_label = Identifier(format!("continue.{}", s));
+            let break_label = Identifier(format!("break.{}", s));
+
+            instructions.push(Instruction::Label(start_label.clone()));
+            instructions.append(&mut convert_statement(*body)?);
+            instructions.push(Instruction::Label(continue_label.clone()));
+            let v = convert_exp(cond, &mut instructions)?;
+            instructions.push(Instruction::JumpIfNotZero(v, start_label));
+            instructions.push(Instruction::Label(break_label.clone()));
+        }
+        parse::Statement::For(init, cond, post, body, parse::Identifier(s)) => {
+            let start_label = Identifier(format!("start.{}", s));
+            let continue_label = Identifier(format!("continue.{}", s));
+            let break_label = Identifier(format!("break.{}", s));
+
+            match init {
+                parse::ForInit::Declaration(d) => {
+                    instructions.append(&mut convert_declaration(d)?);
+                }
+                parse::ForInit::Expression(Some(e)) => {
+                    convert_exp(e, &mut instructions)?;
+                }
+                _ => {}
+            };
+
+            instructions.push(Instruction::Label(start_label.clone()));
+
+            let cond_val = if let Some(cond) = cond {
+                convert_exp(cond, &mut instructions)?
+            } else {
+                Val::Constant(1)
+            };
+            instructions.push(Instruction::JumpIfZero(cond_val, break_label.clone()));
+
+            instructions.append(&mut convert_statement(*body)?);
+
+            instructions.push(Instruction::Label(continue_label.clone()));
+
+            if let Some(post) = post {
+                convert_exp(post, &mut instructions)?;
+            }
+
+            instructions.push(Instruction::Jump(start_label));
+            instructions.push(Instruction::Label(break_label.clone()));
+        }
     }
 
     Ok(instructions)
