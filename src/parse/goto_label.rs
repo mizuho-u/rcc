@@ -1,7 +1,7 @@
 use super::validate::SemanticError;
 use super::{env::Env, Block, BlockItem, Identifier, Statement};
 
-pub fn validate_label(body: &mut Block, labelmap: &Env) -> Result<(), SemanticError> {
+pub fn resolve_goto_label(body: &mut Block, labelmap: &Env) -> Result<(), SemanticError> {
     resolve_block(body, labelmap)
 }
 

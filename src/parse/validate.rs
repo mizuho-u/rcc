@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 
 use super::{
-    env::Env, goto_label::validate_label, loop_label::validate_loop, Block, BlockItem, Declaration,
-    Expression, Function, Identifier, Program, Statement, UnaryOperator,
+    env::Env, goto_label::resolve_goto_label, loop_label::resolve_loop_label, Block, BlockItem,
+    Declaration, Expression, Function, Identifier, Program, Statement, UnaryOperator,
 };
 
 #[derive(Debug)]
@@ -26,16 +26,16 @@ pub fn validate(p: &mut Program) -> Result<(), SemanticError> {
 
     let Program::Program(Function::Function(_id, b)) = p;
 
-    resolve_block(b, &mut var, &mut label)?;
+    resolve_variable(b, &mut var, &mut label)?;
 
-    validate_label(b, &label)?;
+    resolve_goto_label(b, &label)?;
 
-    validate_loop(b)?;
+    resolve_loop_label(b)?;
 
     Ok(())
 }
 
-fn resolve_block(b: &mut Block, env: &mut Env, labelmap: &mut Env) -> Result<(), SemanticError> {
+fn resolve_variable(b: &mut Block, env: &mut Env, labelmap: &mut Env) -> Result<(), SemanticError> {
     let Block::Block(body) = b;
 
     for b in body {
@@ -110,7 +110,7 @@ fn resolve_statement(
                 resolve_statement(ls, varenv, labelenv)?;
             }
         }
-        Statement::Compound(b) => resolve_block(b, &mut varenv.extend(), labelenv)?,
+        Statement::Compound(b) => resolve_variable(b, &mut varenv.extend(), labelenv)?,
         Statement::While(cond, body, _id) => {
             resolve_exp(cond, varenv)?;
             resolve_statement(body, varenv, labelenv)?;

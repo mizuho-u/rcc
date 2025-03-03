@@ -1,7 +1,7 @@
 use super::validate::{make_temporary, SemanticError};
 use super::{Block, BlockItem, Identifier, Statement};
 
-pub fn validate_loop(body: &mut Block) -> Result<(), SemanticError> {
+pub fn resolve_loop_label(body: &mut Block) -> Result<(), SemanticError> {
     match body {
         Block::Block(block_items) => {
             for b in block_items {
