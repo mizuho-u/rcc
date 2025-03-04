@@ -56,6 +56,9 @@ pub enum Token {
     For,
     Break,
     Continue,
+    Switch,
+    Case,
+    Default,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -76,7 +79,7 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
 
     if let Some(t) = find_token(
         s,
-        r"^(if|else|\?|\:|goto|do|while|for|break|continue)[a-zA-Z0-9_]*",
+        r"^(if|else|\?|\:|goto|do|while|for|break|continue|switch|case|default)[a-zA-Z0-9_]*",
         |c| match c {
             "if" => Some(Token::If),
             "else" => Some(Token::Else),
@@ -88,6 +91,9 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
             "for" => Some(Token::For),
             "break" => Some(Token::Break),
             "continue" => Some(Token::Continue),
+            "switch" => Some(Token::Switch),
+            "case" => Some(Token::Case),
+            "default" => Some(Token::Default),
             _ => None,
         },
     ) {

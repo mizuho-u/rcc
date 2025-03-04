@@ -238,6 +238,12 @@ fn loops() {
 }
 
 #[test]
+fn switch_case() {
+    let result = token::tokenize(" switch case default ".into()).unwrap();
+    assert_eq!(result, vec![Token::Switch, Token::Case, Token::Default])
+}
+
+#[test]
 #[should_panic]
 fn invalid_token() {
     token::tokenize(" 1foo ".into()).unwrap();
