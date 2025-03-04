@@ -41,6 +41,9 @@ pub enum Statement {
         Box<Statement>,
         Identifier,
     ),
+    Switch(Expression, Box<Statement>, Identifier),
+    Case(Expression, Box<Statement>, Identifier),
+    Default(Box<Statement>, Identifier),
 }
 
 #[derive(PartialEq, Debug)]
@@ -342,6 +345,42 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
                 cond,
                 post,
                 Box::new(parse_statement(tokens)?),
+                Identifier::placeholder(),
+            ))
+        }
+        Token::Switch => {
+            consume(tokens);
+            expect(tokens, Token::OpenParen)?;
+            let ctrl = parse_exp(tokens, 0)?;
+            expect(tokens, Token::CloseParen)?;
+
+            let body = parse_statement(tokens)?;
+
+            Ok(Statement::Switch(
+                ctrl,
+                Box::new(body),
+                Identifier::placeholder(),
+            ))
+        }
+        Token::Case => {
+            consume(tokens);
+            let exp = parse_exp(tokens, 0)?;
+            expect(tokens, Token::Colon)?;
+            let body = parse_statement(tokens)?;
+
+            Ok(Statement::Case(
+                exp,
+                Box::new(body),
+                Identifier::placeholder(),
+            ))
+        }
+        Token::Default => {
+            consume(tokens);
+            expect(tokens, Token::Colon)?;
+            let body = parse_statement(tokens)?;
+
+            Ok(Statement::Default(
+                Box::new(body),
                 Identifier::placeholder(),
             ))
         }

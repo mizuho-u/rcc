@@ -1214,75 +1214,63 @@ fn for_continue_break() {
     )
 }
 
-// #[test]
-// fn a() {
-//     let mut result = token::tokenize(
-//         " int main(void) {
-//     int i = 1;
-//     do {
-//     while_start:
-//         i = i + 1;
-//         if (i < 10)
-//             goto while_start;
+#[test]
+fn switch_case() {
+    let mut result = token::tokenize(" int main(void) { int a = 0; switch(a) { int b = 0; case 0: a += 0; break; case 1: a += 1; default: a+=2; } return a; } ".into()).unwrap();
+    let result = parse(&mut result).unwrap();
 
-//     } while (0);
-//     return i;
-// } "
-//         .into(),
-//     )
-//     .unwrap();
-
-//     dbg!(&result);
-//     let result = parse(&mut result).unwrap();
-
-//     assert_eq!(
-//         result,
-//         Program::Program(Function::Function(
-//             Identifier("main".to_string()),
-//             Block::Block(vec![
-//                 BlockItem::Declaration(Declaration::Declaration(
-//                     Identifier("a".to_string()),
-//                     Some(Expression::Constant(0))
-//                 )),
-//                 BlockItem::Statement(Statement::For(
-//                     ForInit::Expression(None),
-//                     None,
-//                     Some(Expression::Unary(
-//                         UnaryOperator::IncrementPostfix,
-//                         Box::new(Expression::Var(Identifier("a".to_string())))
-//                     )),
-//                     Box::new(Statement::Compound(Block::Block(vec![
-//                         BlockItem::Statement(Statement::If(
-//                             Expression::Binary(
-//                                 BinaryOperator::EqualTo,
-//                                 Box::new(Expression::Binary(
-//                                     BinaryOperator::Remainder,
-//                                     Box::new(Expression::Var(Identifier("a".to_string()))),
-//                                     Box::new(Expression::Constant(2))
-//                                 )),
-//                                 Box::new(Expression::Constant(0))
-//                             ),
-//                             Box::new(Statement::Continue(Identifier::placeholder())),
-//                             None
-//                         )),
-//                         BlockItem::Statement(Statement::If(
-//                             Expression::Binary(
-//                                 BinaryOperator::EqualTo,
-//                                 Box::new(Expression::Var(Identifier("a".to_string()))),
-//                                 Box::new(Expression::Constant(10))
-//                             ),
-//                             Box::new(Statement::Break(Identifier::placeholder())),
-//                             None
-//                         ))
-//                     ]))),
-//                     Identifier::placeholder()
-//                 )),
-//                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
-//                     "a".to_string()
-//                 ))))
-//             ])
-//         )),
-//         "{:#?}",
-//         result
-//     )
-// }
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("a".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::Switch(
+                    Expression::Var(Identifier("a".to_string())),
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Declaration(Declaration::Declaration(
+                            Identifier("b".to_string()),
+                            Some(Expression::Constant(0))
+                        )),
+                        BlockItem::Statement(Statement::Case(
+                            Expression::Constant(0),
+                            Box::new(Statement::Expression(Expression::Assignment(
+                                AssignmentOperator::Addition,
+                                Box::new(Expression::Var(Identifier("a".to_string()))),
+                                Box::new(Expression::Constant(0))
+                            ))),
+                            Identifier::placeholder()
+                        )),
+                        BlockItem::Statement(Statement::Break(Identifier::placeholder())),
+                        BlockItem::Statement(Statement::Case(
+                            Expression::Constant(1),
+                            Box::new(Statement::Expression(Expression::Assignment(
+                                AssignmentOperator::Addition,
+                                Box::new(Expression::Var(Identifier("a".to_string()))),
+                                Box::new(Expression::Constant(1))
+                            ))),
+                            Identifier::placeholder()
+                        )),
+                        BlockItem::Statement(Statement::Default(
+                            Box::new(Statement::Expression(Expression::Assignment(
+                                AssignmentOperator::Addition,
+                                Box::new(Expression::Var(Identifier("a".to_string()))),
+                                Box::new(Expression::Constant(2))
+                            ))),
+                            Identifier::placeholder()
+                        )),
+                    ]))),
+                    Identifier::placeholder()
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
+                    "a".to_string()
+                ))))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
