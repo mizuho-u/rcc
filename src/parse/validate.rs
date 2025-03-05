@@ -138,6 +138,21 @@ fn resolve_statement(
 
             resolve_statement(body, &mut varenv, labelenv)?;
         }
+        Statement::Switch(ctrl, body, _cases, _id) => {
+            resolve_exp(ctrl, varenv)?;
+            resolve_statement(body, varenv, labelenv)?;
+        }
+        Statement::Case(exp, body, _id) => {
+            resolve_exp(exp, varenv)?;
+            if let Some(body) = body {
+                resolve_statement(body, varenv, labelenv)?;
+            }
+        }
+        Statement::Default(body, _id) => {
+            if let Some(body) = body {
+                resolve_statement(body, varenv, labelenv)?;
+            }
+        }
         _ => {}
     }
 

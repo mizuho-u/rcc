@@ -1,12 +1,17 @@
 use super::validate::{make_temporary, SemanticError};
-use super::{Block, BlockItem, Identifier, Statement};
+use super::{parser, Block, BlockItem, Identifier, Statement};
+
+enum Label {
+    Loop(String),
+    Switch(String),
+}
 
 pub fn resolve_loop_label(body: &mut Block) -> Result<(), SemanticError> {
     match body {
         Block::Block(block_items) => {
             for b in block_items {
                 if let BlockItem::Statement(s) = b {
-                    label_statement(s, None)?;
+                    label_statement(s, &mut vec![], &mut vec![])?;
                 }
             }
         }
@@ -15,18 +20,44 @@ pub fn resolve_loop_label(body: &mut Block) -> Result<(), SemanticError> {
     Ok(())
 }
 
-fn label_statement(s: &mut Statement, label: Option<&String>) -> Result<(), SemanticError> {
+fn label_statement(
+    s: &mut Statement,
+    labels: &mut Vec<Label>,
+    cases: &mut Vec<(Option<parser::Expression>, parser::Identifier)>,
+) -> Result<(), SemanticError> {
     match s {
         Statement::Break(Identifier(id)) => {
-            if let Some(s) = label {
-                *id = s.clone();
-            } else {
-                return Err(SemanticError("break statement outside of loop".to_string()));
+            if labels.len() == 0 {
+                return Err(SemanticError(
+                    "break statement outside of loop or switch".to_string(),
+                ));
+            }
+
+            if let Some(l) = labels.last() {
+                match l {
+                    Label::Loop(s) => {
+                        *id = s.to_string();
+                    }
+                    Label::Switch(s) => {
+                        *id = s.to_string();
+                    }
+                }
             }
         }
         Statement::Continue(Identifier(id)) => {
-            if let Some(s) = label {
-                *id = s.clone();
+            let mut closest_loop = None;
+            for l in labels.iter().rev() {
+                match l {
+                    Label::Loop(s) => {
+                        closest_loop = Some(s);
+                        break;
+                    }
+                    Label::Switch(_) => {}
+                }
+            }
+
+            if let Some(s) = closest_loop {
+                *id = s.to_string();
             } else {
                 return Err(SemanticError(
                     "continue statement outside of loop".to_string(),
@@ -35,38 +66,124 @@ fn label_statement(s: &mut Statement, label: Option<&String>) -> Result<(), Sema
         }
         Statement::While(_e, s, Identifier(id)) => {
             let label = make_label(&"while".into());
+            labels.push(Label::Loop(label.clone()));
 
-            label_statement(s, Some(&label))?;
+            label_statement(s, labels, cases)?;
+
+            labels.pop();
+
             *id = label;
         }
         Statement::DoWhile(s, _e, Identifier(id)) => {
             let label = make_label(&"dowhile".into());
+            labels.push(Label::Loop(label.clone()));
 
-            label_statement(s, Some(&label))?;
+            label_statement(s, labels, cases)?;
+
+            labels.pop();
+
             *id = label;
         }
         Statement::For(_init, _cond, _post, s, Identifier(id)) => {
             let label = make_label(&"for".into());
+            labels.push(Label::Loop(label.clone()));
 
-            label_statement(s, Some(&label))?;
+            label_statement(s, labels, cases)?;
+
+            labels.pop();
+
             *id = label;
         }
         Statement::If(_e, s1, s2) => {
-            label_statement(s1, label)?;
+            label_statement(s1, labels, cases)?;
+
             if let Some(o) = s2 {
-                label_statement(o, label)?;
+                label_statement(o, labels, cases)?;
             }
         }
-        Statement::Label(_id, s) => label_statement(s, label)?,
+        Statement::Label(_id, s) => label_statement(s, labels, cases)?,
         Statement::Compound(b) => match b {
             Block::Block(items) => {
                 for item in items {
                     if let BlockItem::Statement(s) = item {
-                        label_statement(s, label)?;
+                        label_statement(s, labels, cases)?;
                     }
                 }
             }
         },
+        Statement::Switch(_ctrl, s, cases, Identifier(id)) => {
+            let label = make_label(&"switch".into());
+            labels.push(Label::Switch(label.clone()));
+
+            label_statement(s, labels, cases)?;
+
+            labels.pop();
+            *id = label;
+        }
+        Statement::Case(exp, body, Identifier(id)) => {
+            let mut closest_switch = None;
+            for l in labels.iter().rev() {
+                match l {
+                    Label::Switch(s) => {
+                        closest_switch = Some(s);
+                        break;
+                    }
+                    Label::Loop(_) => {}
+                }
+            }
+
+            if let Some(s) = closest_switch {
+                *id = make_temporary(s);
+            } else {
+                return Err(SemanticError("case statement outside of loop".to_string()));
+            }
+
+            if let Some(body) = body {
+                label_statement(body, labels, cases)?;
+            }
+
+            for l in &mut *cases {
+                if let (Some(le), _) = l {
+                    if le == exp {
+                        return Err(SemanticError("dulicate cases".to_string()));
+                    }
+                };
+            }
+
+            cases.push((Some(exp.clone()), Identifier(id.clone())));
+        }
+        Statement::Default(body, Identifier(id)) => {
+            let mut closest_switch = None;
+            for l in labels.iter().rev() {
+                match l {
+                    Label::Switch(s) => {
+                        closest_switch = Some(s);
+                        break;
+                    }
+                    Label::Loop(_) => {}
+                }
+            }
+
+            if let Some(s) = closest_switch {
+                *id = make_temporary(s);
+            } else {
+                return Err(SemanticError(
+                    "default statement outside of loop".to_string(),
+                ));
+            }
+
+            if let Some(body) = body {
+                label_statement(body, labels, cases)?;
+            }
+
+            for l in &mut *cases {
+                if let (None, _) = l {
+                    return Err(SemanticError("dulicate defaults".to_string()));
+                };
+            }
+
+            cases.push((None, Identifier(id.clone())));
+        }
         _ => {}
     };
 

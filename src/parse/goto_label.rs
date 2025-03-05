@@ -1,4 +1,5 @@
 use super::validate::SemanticError;
+use super::Expression;
 use super::{env::Env, Block, BlockItem, Identifier, Statement};
 
 pub fn resolve_goto_label(body: &mut Block, labelmap: &Env) -> Result<(), SemanticError> {
@@ -33,6 +34,28 @@ fn resolve_statement(s: &mut Statement, labelmap: &Env) -> Result<(), SemanticEr
         Statement::While(_cond, body, _id) => resolve_statement(body, labelmap),
         Statement::DoWhile(body, _cond, _id) => resolve_statement(body, labelmap),
         Statement::For(_init, _cond, _post, body, _id) => resolve_statement(body, labelmap),
+        Statement::Switch(_exp, body, _cases, _id) => resolve_statement(body, labelmap),
+        Statement::Case(exp, s, _id) => {
+            if let Expression::Constant(_) = exp {
+            } else {
+                return Err(SemanticError(format!(
+                    "case statement values must be constant"
+                )));
+            };
+
+            if let Some(s) = s {
+                resolve_statement(s, labelmap)?;
+            }
+
+            Ok(())
+        }
+        Statement::Default(s, _id) => {
+            if let Some(s) = s {
+                resolve_statement(s, labelmap)?;
+            }
+
+            Ok(())
+        }
         _ => Ok(()),
     }
 }

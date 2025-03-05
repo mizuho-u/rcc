@@ -260,9 +260,9 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             instructions.push(Instruction::Jump(start_label));
             instructions.push(Instruction::Label(break_label.clone()));
         }
-        parse::Statement::Switch(expression, stmt, identifier) => todo!(),
         parse::Statement::Case(expression, stmt, identifier) => todo!(),
         parse::Statement::Default(stmt, identifier) => todo!(),
+        parse::Statement::Switch(expression, statement, items, identifier) => todo!(),
     }
 
     Ok(instructions)

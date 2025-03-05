@@ -1237,32 +1237,33 @@ fn switch_case() {
                         )),
                         BlockItem::Statement(Statement::Case(
                             Expression::Constant(0),
-                            Box::new(Statement::Expression(Expression::Assignment(
+                            Some(Box::new(Statement::Expression(Expression::Assignment(
                                 AssignmentOperator::Addition,
                                 Box::new(Expression::Var(Identifier("a".to_string()))),
                                 Box::new(Expression::Constant(0))
-                            ))),
+                            )))),
                             Identifier::placeholder()
                         )),
                         BlockItem::Statement(Statement::Break(Identifier::placeholder())),
                         BlockItem::Statement(Statement::Case(
                             Expression::Constant(1),
-                            Box::new(Statement::Expression(Expression::Assignment(
+                            Some(Box::new(Statement::Expression(Expression::Assignment(
                                 AssignmentOperator::Addition,
                                 Box::new(Expression::Var(Identifier("a".to_string()))),
                                 Box::new(Expression::Constant(1))
-                            ))),
+                            )))),
                             Identifier::placeholder()
                         )),
                         BlockItem::Statement(Statement::Default(
-                            Box::new(Statement::Expression(Expression::Assignment(
+                            Some(Box::new(Statement::Expression(Expression::Assignment(
                                 AssignmentOperator::Addition,
                                 Box::new(Expression::Var(Identifier("a".to_string()))),
                                 Box::new(Expression::Constant(2))
-                            ))),
+                            )))),
                             Identifier::placeholder()
                         )),
                     ]))),
+                    vec![],
                     Identifier::placeholder()
                 )),
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(

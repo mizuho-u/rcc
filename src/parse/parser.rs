@@ -41,9 +41,14 @@ pub enum Statement {
         Box<Statement>,
         Identifier,
     ),
-    Switch(Expression, Box<Statement>, Identifier),
-    Case(Expression, Box<Statement>, Identifier),
-    Default(Box<Statement>, Identifier),
+    Switch(
+        Expression,
+        Box<Statement>,
+        Vec<(Option<Expression>, Identifier)>,
+        Identifier,
+    ),
+    Case(Expression, Option<Box<Statement>>, Identifier),
+    Default(Option<Box<Statement>>, Identifier),
 }
 
 #[derive(PartialEq, Debug)]
@@ -359,6 +364,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             Ok(Statement::Switch(
                 ctrl,
                 Box::new(body),
+                vec![],
                 Identifier::placeholder(),
             ))
         }
@@ -366,23 +372,30 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             consume(tokens);
             let exp = parse_exp(tokens, 0)?;
             expect(tokens, Token::Colon)?;
-            let body = parse_statement(tokens)?;
 
-            Ok(Statement::Case(
-                exp,
-                Box::new(body),
-                Identifier::placeholder(),
-            ))
+            let next = peek(tokens).expect("peek failed, no token left.");
+
+            let body = if *next == Token::CloseBrace {
+                None
+            } else {
+                Some(Box::new(parse_statement(tokens)?))
+            };
+
+            Ok(Statement::Case(exp, body, Identifier::placeholder()))
         }
         Token::Default => {
             consume(tokens);
             expect(tokens, Token::Colon)?;
-            let body = parse_statement(tokens)?;
 
-            Ok(Statement::Default(
-                Box::new(body),
-                Identifier::placeholder(),
-            ))
+            let next = peek(tokens).expect("peek failed, no token left.");
+
+            let body = if *next == Token::CloseBrace {
+                None
+            } else {
+                Some(Box::new(parse_statement(tokens)?))
+            };
+
+            Ok(Statement::Default(body, Identifier::placeholder()))
         }
         _ => Ok(parse_statement_expression(tokens)?),
     }

@@ -257,6 +257,124 @@ fn nested_loop_labeling() {
     )
 }
 
+#[test]
+fn switch_labeling() {
+    let result = tokenize_to_validate(
+        " int main(void) { int a = 0; switch(0) { case 0: a += 1; case 1: break; default: } return 1; }",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Declaration(Declaration::Declaration(
+                    Identifier("var.a.1".to_string()),
+                    Some(Expression::Constant(0))
+                )),
+                BlockItem::Statement(Statement::Switch(
+                    Expression::Constant(0),
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::Case(
+                            Expression::Constant(0),
+                            Some(Box::new(Statement::Expression(Expression::Assignment(
+                                AssignmentOperator::Addition,
+                                Box::new(Expression::Var(Identifier("var.a.1".to_string()))),
+                                Box::new(Expression::Constant(1))
+                            )))),
+                            Identifier("switch.2.3".to_string()),
+                        )),
+                        BlockItem::Statement(Statement::Case(
+                            Expression::Constant(1),
+                            Some(Box::new(Statement::Break(Identifier(
+                                "switch.2".to_string()
+                            )))),
+                            Identifier("switch.2.4".to_string()),
+                        )),
+                        BlockItem::Statement(Statement::Default(
+                            None,
+                            Identifier("switch.2.5".to_string()),
+                        )),
+                    ]))),
+                    vec![
+                        (
+                            Some(Expression::Constant(0)),
+                            Identifier("switch.2.3".to_string())
+                        ),
+                        (
+                            Some(Expression::Constant(1)),
+                            Identifier("switch.2.4".to_string())
+                        ),
+                        (None, Identifier("switch.2.5".to_string())),
+                    ],
+                    Identifier("switch.2".to_string())
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Constant(1)))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn switch_inside_loop_labeling() {
+    let result = tokenize_to_validate(
+        " int main(void) { for(;;) { switch(0) { case 0: continue; case 1: break; } break; } return 1; }",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            Block::Block(vec![
+                BlockItem::Statement(Statement::For(
+                    ForInit::Expression(None),
+                    None,
+                    None,
+                    Box::new(Statement::Compound(Block::Block(vec![
+                        BlockItem::Statement(Statement::Switch(
+                            Expression::Constant(0),
+                            Box::new(Statement::Compound(Block::Block(vec![
+                                BlockItem::Statement(Statement::Case(
+                                    Expression::Constant(0),
+                                    Some(Box::new(Statement::Continue(Identifier(
+                                        "for.1".to_string()
+                                    )))),
+                                    Identifier("switch.2.3".to_string()),
+                                )),
+                                BlockItem::Statement(Statement::Case(
+                                    Expression::Constant(1),
+                                    Some(Box::new(Statement::Break(Identifier(
+                                        "switch.2".to_string()
+                                    )))),
+                                    Identifier("switch.2.4".to_string()),
+                                )),
+                            ]))),
+                            vec![
+                                (
+                                    Some(Expression::Constant(0)),
+                                    Identifier("switch.2.3".to_string())
+                                ),
+                                (
+                                    Some(Expression::Constant(1)),
+                                    Identifier("switch.2.4".to_string())
+                                )
+                            ],
+                            Identifier("switch.2".to_string())
+                        )),
+                        BlockItem::Statement(Statement::Break(Identifier("for.1".to_string())))
+                    ]))),
+                    Identifier("for.1".to_string())
+                )),
+                BlockItem::Statement(Statement::Return(Expression::Constant(1)))
+            ])
+        )),
+        "{:#?}",
+        result
+    )
+}
+
 #[should_panic]
 #[test]
 fn break_statement_outside_loop() {
@@ -267,6 +385,28 @@ fn break_statement_outside_loop() {
 #[test]
 fn continue_statement_outside_loop() {
     tokenize_to_validate(" int main(void) { continue; while(0); return 1; } ");
+}
+
+#[should_panic]
+#[test]
+fn continue_statement_inside_switch() {
+    tokenize_to_validate(" int main(void) { switch(0) { case 0: continue; } return 1; } ");
+}
+
+#[should_panic]
+#[test]
+fn duplicate_cases_switch() {
+    tokenize_to_validate(
+        " int main(void) { int a = 0; switch(0) { case 0: a++; case 0: break; default: } return 1; } ",
+    );
+}
+
+#[should_panic]
+#[test]
+fn duplicate_defaults_switch() {
+    tokenize_to_validate(
+        " int main(void) { int a = 0; switch(0) { case 0: break; default: a++; default: break; } return 1; } ",
+    );
 }
 
 fn tokenize_to_validate(p: &str) -> Program {
