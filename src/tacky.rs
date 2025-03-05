@@ -260,9 +260,55 @@ fn convert_statement(s: parse::Statement) -> Result<Vec<Instruction>, TackeyErro
             instructions.push(Instruction::Jump(start_label));
             instructions.push(Instruction::Label(break_label.clone()));
         }
-        parse::Statement::Case(expression, stmt, identifier) => todo!(),
-        parse::Statement::Default(stmt, identifier) => todo!(),
-        parse::Statement::Switch(expression, statement, items, identifier) => todo!(),
+        parse::Statement::Case(_e, s, parse::Identifier(id)) => {
+            instructions.push(Instruction::Label(Identifier(id)));
+            if let Some(s) = s {
+                instructions.append(&mut convert_statement(*s)?);
+            }
+        }
+        parse::Statement::Default(s, parse::Identifier(id)) => {
+            instructions.push(Instruction::Label(Identifier(format!("default.{}", id))));
+            if let Some(s) = s {
+                instructions.append(&mut convert_statement(*s)?);
+            }
+        }
+        parse::Statement::Switch(ctrl, s, cases, parse::Identifier(sid)) => {
+            // caseがなければ何も実行しない
+            // が、ctrlは評価する
+            let v = convert_exp(ctrl, &mut instructions)?;
+
+            if cases.len() == 0 {
+                instructions.push(Instruction::Jump(Identifier(format!("break.{}", sid))));
+            }
+
+            let mut default = None;
+            for (e, parse::Identifier(id)) in cases {
+                if let Some(e) = e {
+                    let cv = convert_exp(e, &mut instructions)?;
+                    let dst = Val::Var(Identifier(make_temporary()));
+                    instructions.push(Instruction::Binary(
+                        BinaryOperator::Equal,
+                        v.clone(),
+                        cv,
+                        dst.clone(),
+                    ));
+
+                    instructions.push(Instruction::JumpIfNotZero(dst, Identifier(id)));
+                } else {
+                    default = Some(Instruction::Jump(Identifier(format!("default.{}", sid))));
+                }
+            }
+
+            if let Some(default) = default {
+                instructions.push(default);
+            } else {
+                // defaultがないかつcaseに引っかからないときはstatementは実行しない
+                instructions.push(Instruction::Jump(Identifier(format!("break.{}", sid))));
+            }
+
+            instructions.append(&mut convert_statement(*s)?);
+            instructions.push(Instruction::Label(Identifier(format!("break.{}", sid))));
+        }
     }
 
     Ok(instructions)

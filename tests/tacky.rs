@@ -729,6 +729,83 @@ fn nested_while_loop() {
     )
 }
 
+#[test]
+fn switch_cases() {
+    let result = tokenize_to_convert(" int main(void) { int a = 0; switch(a) { case 0: a+=1; case 1: a+=2; break; default: a+=3; } return a; } ");
+
+    assert_eq!(
+        result,
+        Program::Program(Function::Function(
+            Identifier("main".to_string()),
+            vec![
+                Instruction::Copy(
+                    Val::Constant(0),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Equal,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(0),
+                    Val::Var(Identifier("tmp.1".to_string())),
+                ),
+                Instruction::JumpIfNotZero(
+                    Val::Var(Identifier("tmp.1".to_string())),
+                    Identifier("switch.2.3".to_string())
+                ),
+                Instruction::Binary(
+                    BinaryOperator::Equal,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("tmp.2".to_string())),
+                ),
+                Instruction::JumpIfNotZero(
+                    Val::Var(Identifier("tmp.2".to_string())),
+                    Identifier("switch.2.4".to_string())
+                ),
+                Instruction::Jump(Identifier("default.switch.2".to_string())),
+                Instruction::Label(Identifier("switch.2.3".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(1),
+                    Val::Var(Identifier("tmp.3".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.3".to_string())),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Label(Identifier("switch.2.4".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(2),
+                    Val::Var(Identifier("tmp.4".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.4".to_string())),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Jump(Identifier("break.switch.2".to_string())),
+                Instruction::Label(Identifier("default.switch.2".to_string())),
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Val::Var(Identifier("var.a.1".to_string())),
+                    Val::Constant(3),
+                    Val::Var(Identifier("tmp.5".to_string())),
+                ),
+                Instruction::Copy(
+                    Val::Var(Identifier("tmp.5".to_string())),
+                    Val::Var(Identifier("var.a.1".to_string())),
+                ),
+                Instruction::Label(Identifier("break.switch.2".to_string())),
+                tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
+            ]
+        )),
+        "{:#?}",
+        result
+    )
+}
+
 fn tokenize_to_convert(p: &str) -> tacky::Program {
     let mut result = token::tokenize(p.into()).unwrap();
     let mut result = parse(&mut result).unwrap();

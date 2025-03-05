@@ -165,7 +165,7 @@ fn label_statement(
             }
 
             if let Some(s) = closest_switch {
-                *id = make_temporary(s);
+                *id = s.to_string();
             } else {
                 return Err(SemanticError(
                     "default statement outside of loop".to_string(),

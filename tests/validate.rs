@@ -293,7 +293,7 @@ fn switch_labeling() {
                         )),
                         BlockItem::Statement(Statement::Default(
                             None,
-                            Identifier("switch.2.5".to_string()),
+                            Identifier("switch.2".to_string()),
                         )),
                     ]))),
                     vec![
@@ -305,7 +305,7 @@ fn switch_labeling() {
                             Some(Expression::Constant(1)),
                             Identifier("switch.2.4".to_string())
                         ),
-                        (None, Identifier("switch.2.5".to_string())),
+                        (None, Identifier("switch.2".to_string())),
                     ],
                     Identifier("switch.2".to_string())
                 )),
