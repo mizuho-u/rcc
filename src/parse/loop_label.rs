@@ -45,18 +45,8 @@ fn label_statement(
             }
         }
         Statement::Continue(Identifier(id)) => {
-            let mut closest_loop = None;
-            for l in labels.iter().rev() {
-                match l {
-                    Label::Loop(s) => {
-                        closest_loop = Some(s);
-                        break;
-                    }
-                    Label::Switch(_) => {}
-                }
-            }
-
-            if let Some(s) = closest_loop {
+            let closest_loop = labels.iter().rev().find(|x| matches!(x, Label::Loop(_)));
+            if let Some(Label::Loop(s)) = closest_loop {
                 *id = s.to_string();
             } else {
                 return Err(SemanticError(
@@ -121,18 +111,8 @@ fn label_statement(
             *id = label;
         }
         Statement::Case(exp, body, Identifier(id)) => {
-            let mut closest_switch = None;
-            for l in labels.iter().rev() {
-                match l {
-                    Label::Switch(s) => {
-                        closest_switch = Some(s);
-                        break;
-                    }
-                    Label::Loop(_) => {}
-                }
-            }
-
-            if let Some(s) = closest_switch {
+            let closest_switch = labels.iter().rev().find(|x| matches!(x, Label::Switch(_)));
+            if let Some(Label::Switch(s)) = closest_switch {
                 *id = make_temporary(s);
             } else {
                 return Err(SemanticError("case statement outside of loop".to_string()));
@@ -153,18 +133,8 @@ fn label_statement(
             cases.push((Some(exp.clone()), Identifier(id.clone())));
         }
         Statement::Default(body, Identifier(id)) => {
-            let mut closest_switch = None;
-            for l in labels.iter().rev() {
-                match l {
-                    Label::Switch(s) => {
-                        closest_switch = Some(s);
-                        break;
-                    }
-                    Label::Loop(_) => {}
-                }
-            }
-
-            if let Some(s) = closest_switch {
+            let closest_switch = labels.iter().rev().find(|x| matches!(x, Label::Switch(_)));
+            if let Some(Label::Switch(s)) = closest_switch {
                 *id = s.to_string();
             } else {
                 return Err(SemanticError(
