@@ -36,12 +36,11 @@ fn resolve_statement(s: &mut Statement, labelmap: &Env) -> Result<(), SemanticEr
         Statement::For(_init, _cond, _post, body, _id) => resolve_statement(body, labelmap),
         Statement::Switch(_exp, body, _cases, _id) => resolve_statement(body, labelmap),
         Statement::Case(exp, s, _id) => {
-            if let Expression::Constant(_) = exp {
-            } else {
+            if !matches!(exp, Expression::Constant(_)) {
                 return Err(SemanticError(format!(
                     "case statement values must be constant"
                 )));
-            };
+            }
 
             if let Some(s) = s {
                 resolve_statement(s, labelmap)?;
