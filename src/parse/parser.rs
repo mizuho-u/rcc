@@ -182,7 +182,7 @@ fn parse_function_declaration(tokens: &mut Vec<Token>) -> Result<FunctionDeclara
     let id = parse_identifier(tokens)?;
     let params = parse_func_params(tokens)?;
 
-    let next = peek(tokens).expect("peek failed, no token left.");
+    let next = peek(tokens, 0)?;
     let block = if *next == Token::Semicolon {
         consume(tokens);
         None
@@ -198,7 +198,7 @@ fn parse_func_params(tokens: &mut Vec<Token>) -> Result<Vec<Identifier>, ParseEr
 
     let mut ids = Vec::new();
 
-    let next = peek(tokens).expect("peek failed, no token left.");
+    let next = peek(tokens, 0)?;
 
     match next {
         Token::Void => {
@@ -209,7 +209,7 @@ fn parse_func_params(tokens: &mut Vec<Token>) -> Result<Vec<Identifier>, ParseEr
             expect(tokens, Token::Int)?;
             ids.push(parse_identifier(tokens)?);
 
-            let next = peek(tokens).expect("peek failed, no token left.");
+            let next = peek(tokens, 0)?;
             if *next == Token::CloseParen {
                 break;
             }
@@ -229,7 +229,7 @@ fn parse_block(tokens: &mut Vec<Token>) -> Result<Block, ParseError> {
     let mut body = Vec::new();
 
     loop {
-        let next = peek(tokens).expect("peek failed, no token left.");
+        let next = peek(tokens, 0)?;
         if *next == Token::CloseBrace {
             break;
         }
@@ -242,7 +242,7 @@ fn parse_block(tokens: &mut Vec<Token>) -> Result<Block, ParseError> {
 }
 
 fn parse_block_item(tokens: &mut Vec<Token>) -> Result<BlockItem, ParseError> {
-    let next = peek(tokens).expect("peek failed, no token left.");
+    let next = peek(tokens, 0)?;
 
     match next {
         Token::Int => Ok(BlockItem::Declaration(parse_declaration(tokens)?)),
@@ -251,10 +251,10 @@ fn parse_block_item(tokens: &mut Vec<Token>) -> Result<BlockItem, ParseError> {
 }
 
 fn parse_declaration(tokens: &mut Vec<Token>) -> Result<Declaration, ParseError> {
-    let _type = peek_ahead(tokens, 0)?;
-    let _id = peek_ahead(tokens, 1)?;
+    let _type = peek(tokens, 0)?;
+    let _id = peek(tokens, 1)?;
 
-    if *peek_ahead(tokens, 2)? == Token::OpenParen {
+    if *peek(tokens, 2)? == Token::OpenParen {
         Ok(Declaration::Function(parse_function_declaration(tokens)?))
     } else {
         Ok(Declaration::Variable(parse_variable_declaration(tokens)?))
@@ -265,7 +265,7 @@ fn parse_variable_declaration(tokens: &mut Vec<Token>) -> Result<VariableDeclara
     let _type = expect(tokens, Token::Int)?;
     let id = parse_identifier(tokens)?;
 
-    let next = peek(tokens).expect("peek failed, no token left.");
+    let next = peek(tokens, 0)?;
 
     if *next == Token::Semicolon {
         consume(tokens);
@@ -280,7 +280,7 @@ fn parse_variable_declaration(tokens: &mut Vec<Token>) -> Result<VariableDeclara
 }
 
 fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
-    let next = peek(tokens).expect("peek failed, no token left.");
+    let next = peek(tokens, 0)?;
 
     match next {
         Token::Semicolon => {
@@ -303,7 +303,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             expect(tokens, Token::CloseParen)?;
             let then = parse_statement(tokens)?;
 
-            let next = peek(tokens).expect("peek failed, no token left.");
+            let next = peek(tokens, 0)?;
             if *next == Token::Else {
                 consume(tokens);
                 let el = parse_statement(tokens)?;
@@ -323,7 +323,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             }
         }
         Token::Identifier(_) => {
-            if let Some(id) = peek_label(tokens) {
+            if let Some(id) = peek_label(tokens)? {
                 consume(tokens);
                 consume(tokens);
 
@@ -378,7 +378,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             consume(tokens);
             expect(tokens, Token::OpenParen)?;
 
-            let next = peek(tokens).expect("peek failed, no token left.");
+            let next = peek(tokens, 0)?;
             let init = if *next == Token::Int {
                 ForInit::Declaration(Declaration::Variable(parse_variable_declaration(tokens)?))
             } else if *next == Token::Semicolon {
@@ -390,7 +390,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
                 ForInit::Expression(Some(e))
             };
 
-            let next = peek(tokens).expect("peek failed, no token left.");
+            let next = peek(tokens, 0)?;
             let cond = if *next == Token::Semicolon {
                 None
             } else {
@@ -398,7 +398,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             };
             expect(tokens, Token::Semicolon)?;
 
-            let next = peek(tokens).expect("peek failed, no token left.");
+            let next = peek(tokens, 0)?;
             let post = if *next == Token::CloseParen {
                 None
             } else {
@@ -434,7 +434,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             let exp = parse_exp(tokens, 0)?;
             expect(tokens, Token::Colon)?;
 
-            let next = peek(tokens).expect("peek failed, no token left.");
+            let next = peek(tokens, 0)?;
 
             let body = if *next == Token::CloseBrace {
                 None
@@ -448,7 +448,7 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
             consume(tokens);
             expect(tokens, Token::Colon)?;
 
-            let next = peek(tokens).expect("peek failed, no token left.");
+            let next = peek(tokens, 0)?;
 
             let body = if *next == Token::CloseBrace {
                 None
@@ -462,16 +462,16 @@ fn parse_statement(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
     }
 }
 
-fn peek_label(tokens: &Vec<Token>) -> Option<Identifier> {
-    let next = peek(tokens).expect("peek failed, no token left.");
+fn peek_label(tokens: &Vec<Token>) -> Result<Option<Identifier>, ParseError> {
+    let next = peek(tokens, 0)?;
     if let Token::Identifier(id) = next {
-        let next_two_ahead = peek_two_ahead(tokens).expect("peek failed, no token left.");
+        let next_two_ahead = peek(tokens, 1)?;
         if *next_two_ahead == Token::Colon {
-            return Some(Identifier(id.clone()));
+            return Ok(Some(Identifier(id.clone())));
         }
     }
 
-    return None;
+    return Ok(None);
 }
 
 fn parse_statement_expression(tokens: &mut Vec<Token>) -> Result<Statement, ParseError> {
@@ -518,19 +518,19 @@ fn parse_factor(tokens: &mut Vec<Token>) -> Result<Expression, ParseError> {
     };
 
     // functions
-    let next = peek(tokens).expect("peek failed, no token left.");
+    let next = peek(tokens, 0)?;
     if *next == Token::OpenParen {
         consume(tokens);
         match e {
             Expression::Var(ref id) => {
                 let mut args = Vec::new();
 
-                let next = peek(tokens).expect("peek failed, no token left.");
+                let next = peek(tokens, 0)?;
                 if *next != Token::CloseParen {
                     loop {
                         args.push(parse_exp(tokens, 0)?);
 
-                        let next = peek(tokens).expect("peek failed, no token left.");
+                        let next = peek(tokens, 0)?;
                         if *next == Token::CloseParen {
                             break;
                         }
@@ -549,7 +549,7 @@ fn parse_factor(tokens: &mut Vec<Token>) -> Result<Expression, ParseError> {
 
     // postfix
     e = loop {
-        let next = peek(tokens).expect("peek failed, no token left.");
+        let next = peek(tokens, 0)?;
         match next {
             Token::IncrementOperator => {
                 consume(tokens);
@@ -570,12 +570,12 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
     let mut left = parse_factor(tokens)?;
 
     loop {
-        let next = peek(tokens).expect("peek failed, no token left.");
+        let next = peek(tokens, 0)?;
         if precedence(next) < min_prededence {
             break;
         }
 
-        if let Some(aop) = peek_assignment_operator(tokens) {
+        if let Some(aop) = peek_assignment_operator(tokens)? {
             let op = consume(tokens);
 
             let right = parse_exp(tokens, precedence(&op))?;
@@ -622,8 +622,8 @@ fn parse_exp(tokens: &mut Vec<Token>, min_prededence: i32) -> Result<Expression,
     Ok(left)
 }
 
-fn peek_assignment_operator(tokens: &Vec<Token>) -> Option<AssignmentOperator> {
-    let op = peek(tokens).expect("peek failed, no token left.");
+fn peek_assignment_operator(tokens: &Vec<Token>) -> Result<Option<AssignmentOperator>, ParseError> {
+    let op = peek(tokens, 0)?;
 
     let aop = match *op {
         Token::AssignmentOperator => AssignmentOperator::Simple,
@@ -637,10 +637,10 @@ fn peek_assignment_operator(tokens: &Vec<Token>) -> Option<AssignmentOperator> {
         Token::CompoundAssignmentXorOperator => AssignmentOperator::Xor,
         Token::CompoundAssignmentLeftShiftOperator => AssignmentOperator::LeftShift,
         Token::CompoundAssignmentRightShiftOperator => AssignmentOperator::RightShift,
-        _ => return None,
+        _ => return Ok(None),
     };
 
-    Some(aop)
+    Ok(Some(aop))
 }
 
 fn parse_binop(op: Token, left: Expression, right: Expression) -> Result<Expression, ParseError> {
@@ -732,23 +732,7 @@ fn expect_fn(tokens: &mut Vec<Token>, cb: fn(&Token) -> bool) -> Result<Token, P
     Ok(head)
 }
 
-fn peek(tokens: &Vec<Token>) -> Option<&Token> {
-    if tokens.len() == 0 {
-        None
-    } else {
-        Some(&tokens[0])
-    }
-}
-
-fn peek_two_ahead(tokens: &Vec<Token>) -> Option<&Token> {
-    if tokens.len() == 0 {
-        None
-    } else {
-        Some(&tokens[1])
-    }
-}
-
-fn peek_ahead(tokens: &Vec<Token>, ahead: usize) -> Result<&Token, ParseError> {
+fn peek(tokens: &Vec<Token>, ahead: usize) -> Result<&Token, ParseError> {
     if tokens.len() == 0 {
         Err(ParseError("peek failed, no token left.".to_string()))
     } else {
