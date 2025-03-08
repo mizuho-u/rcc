@@ -19,9 +19,12 @@ struct Args {
     tacky: Option<bool>,
     #[arg(long, action = clap::ArgAction::SetTrue)]
     codegen: Option<bool>,
+    #[arg(short, action = clap::ArgAction::SetTrue)]
+    c: Option<bool>,
 }
 
 fn main() {
+    // @todo ファイル分割対応
     let args = Args::parse();
 
     let source_path = args.file.canonicalize().expect("invalid file path");
@@ -69,8 +72,13 @@ fn main() {
     let exe_path = exe_dir.join(exe_file);
     let exe_path = exe_path.to_str().unwrap();
 
+    let mut asm_args = vec!["-x", "assembler", "-", "-o", exe_path];
+    if matches!(args.c, Some(true)) {
+        asm_args.push("-c");
+    }
+
     let mut assemble = Command::new("gcc")
-        .args(&["-x", "assembler", "-", "-o", exe_path])
+        .args(&asm_args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
