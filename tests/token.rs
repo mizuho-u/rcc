@@ -244,6 +244,29 @@ fn switch_case() {
 }
 
 #[test]
+fn func() {
+    let result = token::tokenize(" int main(int a, int b, int c); ".into()).unwrap();
+    assert_eq!(
+        result,
+        vec![
+            Token::Int,
+            Token::Identifier("main".to_string()),
+            Token::OpenParen,
+            Token::Int,
+            Token::Identifier("a".to_string()),
+            Token::Comma,
+            Token::Int,
+            Token::Identifier("b".to_string()),
+            Token::Comma,
+            Token::Int,
+            Token::Identifier("c".to_string()),
+            Token::CloseParen,
+            Token::Semicolon,
+        ]
+    )
+}
+
+#[test]
 #[should_panic]
 fn invalid_token() {
     token::tokenize(" 1foo ".into()).unwrap();

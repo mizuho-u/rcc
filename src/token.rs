@@ -59,6 +59,7 @@ pub enum Token {
     Switch,
     Case,
     Default,
+    Comma,
 }
 
 pub fn tokenize(p: Vec<u8>) -> Result<Vec<Token>, &'static str> {
@@ -76,6 +77,14 @@ fn _tokenize<'a>(s: &str, ts: &'a mut Vec<Token>) -> Result<&'a Vec<Token>, &'st
     }
 
     let s = s.trim();
+
+    if let Some(t) = find_token(s, r"^(,)", |c| match c {
+        "," => Some(Token::Comma),
+        _ => None,
+    }) {
+        ts.push(t.0);
+        return _tokenize(&s[t.1..], ts);
+    }
 
     if let Some(t) = find_token(
         s,
