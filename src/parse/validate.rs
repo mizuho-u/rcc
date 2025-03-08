@@ -2,7 +2,8 @@ use std::cell::RefCell;
 
 use super::{
     env::Env, goto_label::resolve_goto_label, loop_label::resolve_loop_label, Block, BlockItem,
-    Declaration, Expression, Function, Identifier, Program, Statement, UnaryOperator,
+    Declaration, Expression, FunctionDeclaration, Identifier, Program, Statement, UnaryOperator,
+    VariableDeclaration,
 };
 
 #[derive(Debug)]
@@ -24,13 +25,17 @@ pub fn validate(p: &mut Program) -> Result<(), SemanticError> {
     let mut var = Env::new();
     let mut label = Env::new();
 
-    let Program::Program(Function::Function(_id, b)) = p;
+    let Program::Program(fs) = p;
 
-    resolve_variable(b, &mut var, &mut label)?;
+    for FunctionDeclaration(_id, _params, b) in fs {
+        if let Some(b) = b {
+            resolve_variable(b, &mut var, &mut label)?;
 
-    resolve_goto_label(b, &label)?;
+            resolve_goto_label(b, &label)?;
 
-    resolve_loop_label(b)?;
+            resolve_loop_label(b)?;
+        }
+    }
 
     Ok(())
 }
@@ -60,7 +65,7 @@ fn resolve_block_item(
 
 fn resolve_declaration(d: &mut Declaration, varenv: &mut Env) -> Result<(), SemanticError> {
     match d {
-        Declaration::Declaration(Identifier(s), exp) => {
+        Declaration::Variable(VariableDeclaration(Identifier(s), exp)) => {
             if varenv.contains_current(&s) {
                 return Err(SemanticError("Duplicate variable declaration".to_string()));
             }
@@ -74,6 +79,7 @@ fn resolve_declaration(d: &mut Declaration, varenv: &mut Env) -> Result<(), Sema
                 resolve_exp(exp, varenv)?;
             };
         }
+        Declaration::Function(function_declaration) => todo!(),
     }
 
     Ok(())

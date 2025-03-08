@@ -1,4 +1,4 @@
-use crate::parse::{self, AssignmentOperator, Block, BlockItem, Expression};
+use crate::parse::{self, AssignmentOperator, Block, BlockItem, Expression, VariableDeclaration};
 use std::cell::RefCell;
 
 #[derive(PartialEq, Debug)]
@@ -83,7 +83,8 @@ pub fn convert(p: parse::Program) -> Result<Program, TackeyError> {
 fn convert_program(p: parse::Program) -> Result<Program, TackeyError> {
     let parse::Program::Program(f) = p;
 
-    Ok(Program::Program(convert_function(f)?))
+    // Ok(Program::Program(convert_function(f)?))
+    Err(TackeyError("not implemented yet".to_string()))
 }
 
 fn convert_function(f: parse::Function) -> Result<Function, TackeyError> {
@@ -146,7 +147,7 @@ fn convert_declaration(d: parse::Declaration) -> Result<Vec<Instruction>, Tackey
     let mut instructions = Vec::new();
 
     match d {
-        parse::Declaration::Declaration(id, Some(exp)) => {
+        parse::Declaration::Variable(VariableDeclaration(id, Some(exp))) => {
             let r = convert_exp(exp, &mut instructions)?;
             instructions.push(Instruction::Copy(r, Val::Var(Identifier(id.0))));
         }
@@ -474,6 +475,7 @@ fn convert_exp(
 
             Ok(dst)
         }
+        parse::Expression::FunctionCall(_, _) => todo!(),
     }
 }
 

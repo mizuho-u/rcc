@@ -7,12 +7,13 @@ fn no_resolution() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![BlockItem::Statement(Statement::Return(
+            vec![],
+            Some(Block::Block(vec![BlockItem::Statement(Statement::Return(
                 Expression::Constant(1)
-            ))])
-        ))
+            ))]))
+        )])
     )
 }
 
@@ -22,18 +23,19 @@ fn var_resolution() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
-                BlockItem::Declaration(Declaration::Declaration(
+            vec![],
+            Some(Block::Block(vec![
+                BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
                     Identifier("var.a.1".to_string()),
                     Some(Expression::Constant(1))
-                )),
+                ))),
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "var.a.1".to_string()
                 ))))
-            ])
-        ))
+            ]))
+        )])
     )
 }
 
@@ -43,22 +45,23 @@ fn using_variables_in_their_own_initializers() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
-                BlockItem::Declaration(Declaration::Declaration(
+            vec![],
+            Some(Block::Block(vec![
+                BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
                     Identifier("var.a.1".to_string()),
                     Some(Expression::Binary(
                         BinaryOperator::Add,
                         Box::new(Expression::Var(Identifier("var.a.1".to_string()))),
                         Box::new(Expression::Constant(1)),
                     ))
-                )),
+                ))),
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "var.a.1".to_string()
                 ))))
-            ])
-        ))
+            ]))
+        )])
     )
 }
 
@@ -69,22 +72,23 @@ fn mixed_precedence_assignment() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
-                BlockItem::Declaration(Declaration::Declaration(
+            vec![],
+            Some(Block::Block(vec![
+                BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
                     Identifier("var.a.1".to_string()),
                     Some(Expression::Binary(
                         BinaryOperator::Add,
                         Box::new(Expression::Var(Identifier("var.a.1".to_string()))),
                         Box::new(Expression::Constant(1)),
                     ))
-                )),
+                ))),
                 BlockItem::Statement(Statement::Return(Expression::Var(Identifier(
                     "var.a.1".to_string()
                 ))))
-            ])
-        ),),
+            ]))
+        )],),
         "{:#?}",
         result
     )
@@ -139,9 +143,10 @@ fn for_loop_labeling() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
+            vec![],
+            Some(Block::Block(vec![
                 BlockItem::Statement(Statement::For(
                     ForInit::Expression(None),
                     None,
@@ -150,8 +155,8 @@ fn for_loop_labeling() {
                     Identifier("for.1".to_string())
                 )),
                 BlockItem::Statement(Statement::Return(Expression::Constant(1)))
-            ])
-        ))
+            ]))
+        )])
     )
 }
 
@@ -161,17 +166,18 @@ fn while_loop_labeling() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
+            vec![],
+            Some(Block::Block(vec![
                 BlockItem::Statement(Statement::While(
                     Expression::Constant(1),
                     Box::new(Statement::Continue(Identifier("while.1".to_string()))),
                     Identifier("while.1".to_string())
                 )),
                 BlockItem::Statement(Statement::Return(Expression::Constant(1)))
-            ])
-        ))
+            ]))
+        )])
     )
 }
 
@@ -181,13 +187,14 @@ fn do_while_loop_labeling() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
-                BlockItem::Declaration(Declaration::Declaration(
+            vec![],
+            Some(Block::Block(vec![
+                BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
                     Identifier("var.a.1".to_string()),
                     Some(Expression::Constant(0))
-                )),
+                ))),
                 BlockItem::Statement(Statement::DoWhile(
                     Box::new(Statement::Compound(Block::Block(vec![
                         BlockItem::Statement(Statement::If(
@@ -217,8 +224,8 @@ fn do_while_loop_labeling() {
                     Identifier("dowhile.2".to_string())
                 )),
                 BlockItem::Statement(Statement::Return(Expression::Constant(1)))
-            ])
-        ))
+            ]))
+        )])
     )
 }
 
@@ -230,9 +237,10 @@ fn nested_loop_labeling() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
+            vec![],
+            Some(Block::Block(vec![
                 BlockItem::Statement(Statement::For(
                     ForInit::Expression(None),
                     None,
@@ -252,8 +260,8 @@ fn nested_loop_labeling() {
                     Identifier("for.1".to_string())
                 )),
                 BlockItem::Statement(Statement::Return(Expression::Constant(1)))
-            ])
-        ))
+            ]))
+        )])
     )
 }
 
@@ -265,13 +273,14 @@ fn switch_labeling() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
-                BlockItem::Declaration(Declaration::Declaration(
+            vec![],
+            Some(Block::Block(vec![
+                BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
                     Identifier("var.a.1".to_string()),
                     Some(Expression::Constant(0))
-                )),
+                ))),
                 BlockItem::Statement(Statement::Switch(
                     Expression::Constant(0),
                     Box::new(Statement::Compound(Block::Block(vec![
@@ -310,8 +319,8 @@ fn switch_labeling() {
                     Identifier("switch.2".to_string())
                 )),
                 BlockItem::Statement(Statement::Return(Expression::Constant(1)))
-            ])
-        )),
+            ]))
+        )]),
         "{:#?}",
         result
     )
@@ -325,9 +334,10 @@ fn switch_inside_loop_labeling() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![FunctionDeclaration(
             Identifier("main".to_string()),
-            Block::Block(vec![
+            vec![],
+            Some(Block::Block(vec![
                 BlockItem::Statement(Statement::For(
                     ForInit::Expression(None),
                     None,
@@ -368,8 +378,8 @@ fn switch_inside_loop_labeling() {
                     Identifier("for.1".to_string())
                 )),
                 BlockItem::Statement(Statement::Return(Expression::Constant(1)))
-            ])
-        )),
+            ]))
+        )]),
         "{:#?}",
         result
     )
