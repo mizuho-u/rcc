@@ -385,6 +385,453 @@ fn switch_inside_loop_labeling() {
     )
 }
 
+#[test]
+fn function_definition() {
+    let result = tokenize_to_validate(" int func(int a, int b){ int c = 1; return a + b + c; }");
+
+    assert_eq!(
+        result,
+        Program::Program(vec![FunctionDeclaration(
+            Identifier("func".to_string()),
+            vec![
+                Identifier("param.func.a.1".to_string()),
+                Identifier("param.func.b.2".to_string())
+            ],
+            Some(Block::Block(vec![
+                BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                    Identifier("var.c.3".to_string()),
+                    Some(Expression::Constant(1))
+                ))),
+                BlockItem::Statement(Statement::Return(Expression::Binary(
+                    BinaryOperator::Add,
+                    Box::new(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Var(Identifier("param.func.a.1".to_string()))),
+                        Box::new(Expression::Var(Identifier("param.func.b.2".to_string()))),
+                    )),
+                    Box::new(Expression::Var(Identifier("var.c.3".to_string()))),
+                )))
+            ]))
+        )]),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_call() {
+    let result = tokenize_to_validate(
+        " int func(int a, int b){ int c = 1; return a + b + c; } int main(void) { int a = 1; return func(a, 2); } ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.a.1".to_string()),
+                    Identifier("param.func.b.2".to_string())
+                ],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.c.3".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Binary(
+                            BinaryOperator::Add,
+                            Box::new(Expression::Var(Identifier("param.func.a.1".to_string()))),
+                            Box::new(Expression::Var(Identifier("param.func.b.2".to_string()))),
+                        )),
+                        Box::new(Expression::Var(Identifier("var.c.3".to_string()))),
+                    )))
+                ]))
+            ),
+            FunctionDeclaration(
+                Identifier("main".to_string()),
+                vec![],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.a.4".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::FunctionCall(
+                        Identifier("func".to_string()),
+                        vec![
+                            Expression::Var(Identifier("var.a.4".to_string())),
+                            Expression::Constant(2)
+                        ]
+                    )))
+                ]))
+            ),
+        ]),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_call_recursively() {
+    let result = tokenize_to_validate(
+        " int func(int a, int b){ int c = 1; return func(a, b); } int main(void) { int a = 1; return func(a, 2); } ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.a.1".to_string()),
+                    Identifier("param.func.b.2".to_string())
+                ],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.c.3".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::FunctionCall(
+                        Identifier("func".to_string()),
+                        vec![
+                            Expression::Var(Identifier("param.func.a.1".to_string())),
+                            Expression::Var(Identifier("param.func.b.2".to_string())),
+                        ]
+                    )))
+                ]))
+            ),
+            FunctionDeclaration(
+                Identifier("main".to_string()),
+                vec![],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.a.4".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::FunctionCall(
+                        Identifier("func".to_string()),
+                        vec![
+                            Expression::Var(Identifier("var.a.4".to_string())),
+                            Expression::Constant(2)
+                        ]
+                    )))
+                ]))
+            ),
+        ]),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_declaration() {
+    let result = tokenize_to_validate(
+        " int func(int a, int b); int main(void) { int a = 1; return func(a, 2); } ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.a.1".to_string()),
+                    Identifier("param.func.b.2".to_string())
+                ],
+                None
+            ),
+            FunctionDeclaration(
+                Identifier("main".to_string()),
+                vec![],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.a.3".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::FunctionCall(
+                        Identifier("func".to_string()),
+                        vec![
+                            Expression::Var(Identifier("var.a.3".to_string())),
+                            Expression::Constant(2)
+                        ]
+                    )))
+                ]))
+            ),
+        ]),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_forward_declaration() {
+    let result = tokenize_to_validate(
+        " int func(int a, int b); int main(void) { int a = 1; return func(a, 2); } int func(int a, int b){ int c = 1; return a + b + c; }",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.a.1".to_string()),
+                    Identifier("param.func.b.2".to_string())
+                ],
+                None
+            ),
+            FunctionDeclaration(
+                Identifier("main".to_string()),
+                vec![],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.a.3".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::FunctionCall(
+                        Identifier("func".to_string()),
+                        vec![
+                            Expression::Var(Identifier("var.a.3".to_string())),
+                            Expression::Constant(2)
+                        ]
+                    )))
+                ]))
+            ),
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.a.4".to_string()),
+                    Identifier("param.func.b.5".to_string())
+                ],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.c.6".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Binary(
+                            BinaryOperator::Add,
+                            Box::new(Expression::Var(Identifier("param.func.a.4".to_string()))),
+                            Box::new(Expression::Var(Identifier("param.func.b.5".to_string()))),
+                        )),
+                        Box::new(Expression::Var(Identifier("var.c.6".to_string()))),
+                    )))
+                ]))
+            ),
+        ]),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_local_declaration() {
+    let result = tokenize_to_validate(
+        " int main(void) { int a = 1; int func(int a, int b); return func(a, 2); } int func(int a, int b){ int c = 1; return a + b + c; }",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            FunctionDeclaration(
+                Identifier("main".to_string()),
+                vec![],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.a.1".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Declaration(Declaration::Function(FunctionDeclaration(
+                        Identifier("func".to_string()),
+                        vec![
+                            Identifier("param.func.a.2".to_string()),
+                            Identifier("param.func.b.3".to_string())
+                        ],
+                        None
+                    ),)),
+                    BlockItem::Statement(Statement::Return(Expression::FunctionCall(
+                        Identifier("func".to_string()),
+                        vec![
+                            Expression::Var(Identifier("var.a.1".to_string())),
+                            Expression::Constant(2)
+                        ]
+                    )))
+                ]))
+            ),
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.a.4".to_string()),
+                    Identifier("param.func.b.5".to_string())
+                ],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.c.6".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Binary(
+                            BinaryOperator::Add,
+                            Box::new(Expression::Var(Identifier("param.func.a.4".to_string()))),
+                            Box::new(Expression::Var(Identifier("param.func.b.5".to_string()))),
+                        )),
+                        Box::new(Expression::Var(Identifier("var.c.6".to_string()))),
+                    )))
+                ]))
+            ),
+        ]),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_duplicate_declaration() {
+    let result = tokenize_to_validate(
+        "
+        int func(int a, int b);
+        
+        int main(void) {
+            int a = 1; int func(int c, int d); return func(a, 2);
+        }
+        
+        int func(int e, int f);
+        
+        int func(int a, int b){
+            int c = 1; return a + b + c;
+        }
+    ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.a.1".to_string()),
+                    Identifier("param.func.b.2".to_string())
+                ],
+                None
+            ),
+            FunctionDeclaration(
+                Identifier("main".to_string()),
+                vec![],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.a.3".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Declaration(Declaration::Function(FunctionDeclaration(
+                        Identifier("func".to_string()),
+                        vec![
+                            Identifier("param.func.c.4".to_string()),
+                            Identifier("param.func.d.5".to_string())
+                        ],
+                        None
+                    ),)),
+                    BlockItem::Statement(Statement::Return(Expression::FunctionCall(
+                        Identifier("func".to_string()),
+                        vec![
+                            Expression::Var(Identifier("var.a.3".to_string())),
+                            Expression::Constant(2)
+                        ]
+                    )))
+                ]))
+            ),
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.e.6".to_string()),
+                    Identifier("param.func.f.7".to_string())
+                ],
+                None
+            ),
+            FunctionDeclaration(
+                Identifier("func".to_string()),
+                vec![
+                    Identifier("param.func.a.8".to_string()),
+                    Identifier("param.func.b.9".to_string())
+                ],
+                Some(Block::Block(vec![
+                    BlockItem::Declaration(Declaration::Variable(VariableDeclaration(
+                        Identifier("var.c.10".to_string()),
+                        Some(Expression::Constant(1))
+                    ))),
+                    BlockItem::Statement(Statement::Return(Expression::Binary(
+                        BinaryOperator::Add,
+                        Box::new(Expression::Binary(
+                            BinaryOperator::Add,
+                            Box::new(Expression::Var(Identifier("param.func.a.8".to_string()))),
+                            Box::new(Expression::Var(Identifier("param.func.b.9".to_string()))),
+                        )),
+                        Box::new(Expression::Var(Identifier("var.c.10".to_string()))),
+                    )))
+                ]))
+            ),
+        ]),
+        "{:#?}",
+        result
+    )
+}
+
+#[should_panic]
+#[test]
+fn function_no_declaration_before_call() {
+    tokenize_to_validate(
+        "
+        int main(void) {
+            int a = 1; return func(a, 2);
+        }
+        
+        int func(int a, int b){
+            int c = 1; return a + b + c;
+        }
+    ",
+    );
+}
+
+#[should_panic]
+#[test]
+fn function_dupulicate_declaration() {
+    tokenize_to_validate(
+        "
+        int func(int a, int b);
+        
+        int main(void) {
+            int a = 1; int func(int c, int d); return func(a, 2);
+        }
+        
+        int func(int e, int f);
+        
+        int func(int a, int b){
+            int c = 1; return a + b + c;
+        }
+
+        int func(int a, int b){
+            int c = 1; return a + b + c;
+        }
+
+    ",
+    );
+}
+
+#[should_panic]
+#[test]
+fn function_dupulicate_identifier() {
+    tokenize_to_validate(
+        "
+        int func(int a, int b){
+            int a = 1;
+            return a + b + c;
+        }
+        ",
+    );
+}
+
 #[should_panic]
 #[test]
 fn break_statement_outside_loop() {
