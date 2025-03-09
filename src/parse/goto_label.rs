@@ -2,11 +2,11 @@ use super::validate::SemanticError;
 use super::Expression;
 use super::{env::Env, Block, BlockItem, Identifier, Statement};
 
-pub fn resolve_goto_label(body: &mut Block, labelmap: &Env) -> Result<(), SemanticError> {
+pub fn resolve_goto_label(body: &mut Block, labelmap: &Env<String>) -> Result<(), SemanticError> {
     resolve_block(body, labelmap)
 }
 
-fn resolve_statement(s: &mut Statement, labelmap: &Env) -> Result<(), SemanticError> {
+fn resolve_statement(s: &mut Statement, labelmap: &Env<String>) -> Result<(), SemanticError> {
     match s {
         Statement::Label(_id, ls) => {
             resolve_statement(ls, labelmap)?;
@@ -59,7 +59,7 @@ fn resolve_statement(s: &mut Statement, labelmap: &Env) -> Result<(), SemanticEr
     }
 }
 
-fn resolve_block(b: &mut Block, labelmap: &Env) -> Result<(), SemanticError> {
+fn resolve_block(b: &mut Block, labelmap: &Env<String>) -> Result<(), SemanticError> {
     let Block::Block(body) = b;
 
     for b in body {
