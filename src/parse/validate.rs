@@ -4,6 +4,7 @@ use super::{
     env::{Entry, Env},
     goto_label::resolve_goto_label,
     loop_label::resolve_loop_label,
+    type_check::type_check,
     Block, BlockItem, Declaration, Expression, FunctionDeclaration, Identifier, Program, Statement,
     UnaryOperator, VariableDeclaration,
 };
@@ -37,6 +38,8 @@ pub fn validate(p: &mut Program) -> Result<(), SemanticError> {
             resolve_loop_label(body)?;
         }
     }
+
+    type_check(p)?;
 
     Ok(())
 }
@@ -268,7 +271,7 @@ fn resolve_exp(exp: &mut Expression, identifier_env: &Env<Entry>) -> Result<(), 
         }
         Expression::Assignment(_op, e1, e2) => {
             match e1.as_ref() {
-                Expression::Var(Identifier(name)) => {
+                Expression::Var(Identifier(_name)) => {
                     resolve_exp(e1, identifier_env)?;
                     resolve_exp(e2, identifier_env)?;
                 }

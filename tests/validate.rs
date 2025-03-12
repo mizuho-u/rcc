@@ -866,6 +866,101 @@ fn duplicate_defaults_switch() {
     );
 }
 
+#[should_panic]
+#[test]
+fn redefine_function() {
+    tokenize_to_validate(
+        "
+            int main(void) {
+                ;
+            }
+
+            int main(void) {
+                int a = 0;
+                switch(0) {
+                    case 0: break;
+                    default: break;
+                }
+                return 1;
+            }
+        ",
+    );
+}
+
+#[should_panic]
+#[test]
+fn conflict_function_declaration_args_type() {
+    tokenize_to_validate(
+        "
+            int main(int a);
+            int main(void) {
+                int a = 0;
+                switch(0) {
+                    case 0: break;
+                    default: break;
+                }
+                return 1;
+            }
+        ",
+    );
+}
+
+#[should_panic]
+#[test]
+fn conflict_function_declaration_args_num() {
+    tokenize_to_validate(
+        "
+            int func(int a);
+            int func(int a, int b) {
+                return 1;
+            }
+        ",
+    );
+}
+
+#[should_panic]
+#[test]
+fn conflict_local_function_declaration() {
+    tokenize_to_validate(
+        "
+            int func(int a) {
+                int func(void);
+                return 1;
+            }
+        ",
+    );
+}
+
+#[should_panic]
+#[test]
+fn call_variable_as_function() {
+    tokenize_to_validate(
+        "
+            int func(void) {
+                int a = 0;
+                return a();
+            }
+        ",
+    );
+}
+
+#[should_panic]
+#[test]
+fn use_function_as_variable() {
+    tokenize_to_validate(
+        "
+            int func(void) {
+                return 1;
+            }
+
+            int main(void) {
+                int a = func;
+                return a;
+            }
+
+        ",
+    );
+}
 fn tokenize_to_validate(p: &str) -> Program {
     let mut result = token::tokenize(p.into()).unwrap();
     let mut result = parse(&mut result).unwrap();
