@@ -3,12 +3,12 @@ use std::cell::RefCell;
 
 #[derive(PartialEq, Debug)]
 pub enum Program {
-    Program(Function),
+    Program(Vec<Function>),
 }
 
 #[derive(PartialEq, Debug)]
 pub enum Function {
-    Function(Identifier, Vec<Instruction>),
+    Function(Identifier, Vec<Identifier>, Vec<Instruction>),
 }
 
 #[derive(PartialEq, Debug)]
@@ -21,6 +21,7 @@ pub enum Instruction {
     JumpIfZero(Val, Identifier),
     JumpIfNotZero(Val, Identifier),
     Label(Identifier),
+    FunctionCall(Identifier, Vec<Val>, Val),
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -81,45 +82,57 @@ pub fn convert(p: parse::Program) -> Result<Program, TackeyError> {
 }
 
 fn convert_program(p: parse::Program) -> Result<Program, TackeyError> {
-    let parse::Program::Program(f) = p;
+    let parse::Program::Program(fs) = p;
 
-    // Ok(Program::Program(convert_function(f)?))
-    Err(TackeyError("not implemented yet".to_string()))
-}
-
-fn convert_function(f: parse::Function) -> Result<Function, TackeyError> {
-    let parse::Function::Function(id, body) = f;
-
-    let mut insts = convert_block(body)?;
-
-    // これはok
-    // int main(void) {
-    //     int a = 4;
-    //     a = 0;
-    // }
-    //
-    // これもok
-    // #include <stdio.h>
-    // int foo(void) {
-    //     printf("I'm living on the edge, baby!");
-    //     // no return statement
-    // }
-
-    // int main(void) {
-    //     foo();
-    //     return 0;
-    // }
-    //
-    // らしい。
-    // ので、その場合のコールスタックの復帰とかその辺の処理をするためReturnを入れる。
-    //
-    // @todo 最終的に全部に入れて最適化で取り除く感じにしたい
-    if let Some(Instruction::Return(_)) = insts.last() {
-    } else {
-        insts.push(Instruction::Return(Val::Constant(0)));
+    let mut functions = Vec::new();
+    for f in fs {
+        if let Some(f) = convert_function(f)? {
+            functions.push(f);
+        }
     }
 
-    Ok(Function::Function(Identifier(id.0), insts))
+    Ok(Program::Program(functions))
+}
+
+fn convert_function(f: parse::FunctionDeclaration) -> Result<Option<Function>, TackeyError> {
+    let parse::FunctionDeclaration(id, params, body) = f;
+
+    if let Some(body) = body {
+        let mut insts = convert_block(body)?;
+
+        // これはok
+        // int main(void) {
+        //     int a = 4;
+        //     a = 0;
+        // }
+        //
+        // これもok
+        // #include <stdio.h>
+        // int foo(void) {
+        //     printf("I'm living on the edge, baby!");
+        //     // no return statement
+        // }
+
+        // int main(void) {
+        //     foo();
+        //     return 0;
+        // }
+        //
+        // らしい。
+        // ので、その場合のコールスタックの復帰とかその辺の処理をするためReturnを入れる。
+        //
+        // @todo 最終的に全部に入れて最適化で取り除く感じにしたい
+        if let Some(Instruction::Return(_)) = insts.last() {
+        } else {
+            insts.push(Instruction::Return(Val::Constant(0)));
+        }
+
+        let params: Vec<Identifier> = params.iter().map(|p| Identifier(p.0.to_string())).collect();
+
+        Ok(Some(Function::Function(Identifier(id.0), params, insts)))
+    } else {
+        Ok(None)
+    }
 }
 
 fn convert_block(b: Block) -> Result<Vec<Instruction>, TackeyError> {
@@ -475,7 +488,21 @@ fn convert_exp(
 
             Ok(dst)
         }
-        parse::Expression::FunctionCall(_, _) => todo!(),
+        parse::Expression::FunctionCall(parse::Identifier(name), args) => {
+            let dst = Val::Var(Identifier(make_temporary()));
+            let args = args
+                .iter()
+                .map(|a| convert_exp(a.clone(), instructions))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            instructions.push(Instruction::FunctionCall(
+                Identifier(name),
+                args,
+                dst.clone(),
+            ));
+
+            Ok(dst)
+        }
     }
 }
 

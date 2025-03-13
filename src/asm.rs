@@ -107,17 +107,18 @@ pub fn convert(p: tacky::Program) -> Result<Program, AssemblyError> {
 fn convert_program(p: tacky::Program) -> Result<Program, AssemblyError> {
     let tacky::Program::Program(func) = p;
 
-    Ok(Program::Program(convert_function(func)?))
+    // Ok(Program::Program(convert_function(func)?))
+    Err(AssemblyError(format!("not implemented yet")))
 }
 
-fn convert_function(f: tacky::Function) -> Result<Function, AssemblyError> {
-    let tacky::Function::Function(id, body) = f;
+// fn convert_function(f: tacky::Function) -> Result<Function, AssemblyError> {
+//     let tacky::Function::Function(id, body) = f;
 
-    Ok(Function::Function {
-        identifier: Identifier(id.0),
-        instructions: convert_statement(body)?,
-    })
-}
+//     Ok(Function::Function {
+//         identifier: Identifier(id.0),
+//         instructions: convert_statement(body)?,
+//     })
+// }
 
 fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, AssemblyError> {
     let mut insts = Vec::new();
@@ -245,6 +246,7 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
             tacky::Instruction::Label(identifier) => {
                 insts.push(Instruction::Label(Identifier(identifier.0)));
             }
+            tacky::Instruction::FunctionCall(identifier, vals, val) => todo!(),
         }
     }
 

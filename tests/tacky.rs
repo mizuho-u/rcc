@@ -9,10 +9,11 @@ fn valid_tacky() {
     let result = tokenize_to_convert(" int main(void) { return 1; } ");
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![tacky::Instruction::Return(tacky::Val::Constant(1))]
-        ))
+        )])
     )
 }
 
@@ -22,8 +23,9 @@ fn valid_tacky_unary() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 tacky::Instruction::Unary(
                     tacky::UnaryOperator::Negate,
@@ -37,7 +39,7 @@ fn valid_tacky_unary() {
                 ),
                 tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.2".to_string()))),
             ]
-        ))
+        )])
     )
 }
 
@@ -47,8 +49,9 @@ fn valid_tacky_binary() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 tacky::Instruction::Binary(
                     tacky::BinaryOperator::Add,
@@ -76,7 +79,7 @@ fn valid_tacky_binary() {
                 ),
                 tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.4".to_string()))),
             ]
-        ))
+        )])
     )
 }
 
@@ -86,8 +89,9 @@ fn bitwise_binary_operator() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 tacky::Instruction::Binary(
                     tacky::BinaryOperator::LeftShift,
@@ -121,7 +125,7 @@ fn bitwise_binary_operator() {
                 ),
                 tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.5".to_string()))),
             ]
-        ))
+        )])
     )
 }
 
@@ -131,8 +135,9 @@ fn logical_operator() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Unary(
                     UnaryOperator::Not,
@@ -161,7 +166,7 @@ fn logical_operator() {
                 Instruction::Label(Identifier("end.2".to_string())),
                 tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.1".to_string()))),
             ]
-        ))
+        )])
     )
 }
 
@@ -171,8 +176,9 @@ fn relational_operator() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Binary(
                     BinaryOperator::Equal,
@@ -212,7 +218,7 @@ fn relational_operator() {
                 ),
                 tacky::Instruction::Return(tacky::Val::Var(Identifier("tmp.6".to_string()))),
             ]
-        ))
+        )])
     )
 }
 
@@ -223,8 +229,9 @@ fn local_variables() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Binary(
                     BinaryOperator::Add,
@@ -248,7 +255,7 @@ fn local_variables() {
                 ),
                 tacky::Instruction::Return(tacky::Val::Var(Identifier("var.b.1".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -260,8 +267,9 @@ fn function_with_no_return_statement() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Binary(
                     BinaryOperator::Add,
@@ -285,7 +293,7 @@ fn function_with_no_return_statement() {
                 ),
                 tacky::Instruction::Return(tacky::Val::Constant(0)),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -298,8 +306,9 @@ fn increment_decrement() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Copy(
                     Val::Constant(1),
@@ -341,7 +350,7 @@ fn increment_decrement() {
                 ),
                 tacky::Instruction::Return(Val::Var(Identifier("tmp.3".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -353,8 +362,9 @@ fn compound_assignment() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Copy(
                     Val::Constant(0),
@@ -372,7 +382,7 @@ fn compound_assignment() {
                 ),
                 tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -384,15 +394,16 @@ fn if_statement() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::JumpIfZero(Val::Constant(1), Identifier("endif.1".to_string())),
                 tacky::Instruction::Return(Val::Constant(2)),
                 tacky::Instruction::Label(Identifier("endif.1".to_string())),
                 tacky::Instruction::Return(Val::Constant(3)),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -404,8 +415,9 @@ fn if_else_statement() {
 
     assert_eq!(
         result,
-        tacky::Program::Program(tacky::Function::Function(
+        tacky::Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::JumpIfZero(Val::Constant(1), Identifier("else.2".to_string())),
                 tacky::Instruction::Return(Val::Constant(2)),
@@ -416,7 +428,7 @@ fn if_else_statement() {
                 // returnがない判定で挿入されてしまう・・そのうち治るはず
                 tacky::Instruction::Return(Val::Constant(0)),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -428,8 +440,9 @@ fn conditional_expression() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::JumpIfZero(Val::Constant(1), Identifier("e2.2".to_string())),
                 Instruction::Copy(Val::Constant(2), Val::Var(Identifier("tmp.1".to_string()))),
@@ -439,7 +452,7 @@ fn conditional_expression() {
                 Instruction::Label(Identifier("endcond.1".to_string())),
                 tacky::Instruction::Return(Val::Var(Identifier("tmp.1".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -453,8 +466,9 @@ fn goto() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Copy(
                     Val::Constant(0),
@@ -476,7 +490,7 @@ fn goto() {
                 ),
                 tacky::Instruction::Return(Val::Var(Identifier("var.b.2".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -490,8 +504,9 @@ fn for_loop() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Copy(
                     Val::Constant(0),
@@ -549,7 +564,7 @@ fn for_loop() {
                 Instruction::Label(Identifier("break.for.3".to_string())),
                 tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -563,8 +578,9 @@ fn while_loop() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Copy(
                     Val::Constant(0),
@@ -607,7 +623,7 @@ fn while_loop() {
                 Instruction::Label(Identifier("break.while.2".to_string())),
                 tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -620,8 +636,9 @@ fn do_while_loop() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Copy(
                     Val::Constant(0),
@@ -652,7 +669,7 @@ fn do_while_loop() {
                 Instruction::Label(Identifier("break.dowhile.2".to_string())),
                 tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -664,8 +681,9 @@ fn nested_while_loop() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Copy(
                     Val::Constant(0),
@@ -723,7 +741,7 @@ fn nested_while_loop() {
                 Instruction::Label(Identifier("break.while.3".to_string())),
                 tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
             ]
-        )),
+        )]),
         "{:#?}",
         result
     )
@@ -735,8 +753,9 @@ fn switch_cases() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function(
+        Program::Program(vec![Function::Function(
             Identifier("main".to_string()),
+            vec![],
             vec![
                 Instruction::Copy(
                     Val::Constant(0),
@@ -800,7 +819,90 @@ fn switch_cases() {
                 Instruction::Label(Identifier("break.switch.2".to_string())),
                 tacky::Instruction::Return(Val::Var(Identifier("var.a.1".to_string()))),
             ]
-        )),
+        )]),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_definition() {
+    let result = tokenize_to_convert(
+        "
+        int func(int a) {
+            return a;
+        }
+
+        int main(void) {
+            return 1;
+        }        
+        ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            Function::Function(
+                Identifier("func".to_string()),
+                vec![Identifier("param.func.a.1".to_string())],
+                vec![Instruction::Return(Val::Var(Identifier(
+                    "param.func.a.1".to_string()
+                )))]
+            ),
+            Function::Function(
+                Identifier("main".to_string()),
+                vec![],
+                vec![Instruction::Return(Val::Constant(1))]
+            ),
+        ]),
+        "{:#?}",
+        result
+    )
+}
+
+#[test]
+fn function_call() {
+    let result = tokenize_to_convert(
+        "
+        int double(int a) {
+            return a*2;
+        }
+
+        int main(void) {
+            return double(2);
+        }        
+        ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            Function::Function(
+                Identifier("double".to_string()),
+                vec![Identifier("param.double.a.1".to_string())],
+                vec![
+                    Instruction::Binary(
+                        BinaryOperator::Multiply,
+                        Val::Var(Identifier("param.double.a.1".to_string())),
+                        Val::Constant(2),
+                        Val::Var(Identifier("tmp.1".to_string()))
+                    ),
+                    Instruction::Return(Val::Var(Identifier("tmp.1".to_string())))
+                ]
+            ),
+            Function::Function(
+                Identifier("main".to_string()),
+                vec![],
+                vec![
+                    Instruction::FunctionCall(
+                        Identifier("double".to_string()),
+                        vec![Val::Constant(2)],
+                        Val::Var(Identifier("tmp.2".to_string()))
+                    ),
+                    Instruction::Return(Val::Var(Identifier("tmp.2".to_string())))
+                ]
+            ),
+        ]),
         "{:#?}",
         result
     )
