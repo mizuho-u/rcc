@@ -1,5 +1,5 @@
 use crate::asm::{
-    BinaryOperator, Function, Instruction, JumpCondition, Operand, Program, UnaryOperator,
+    BinaryOperator, Function, Instruction, JumpCondition, Operand, Program, Register, UnaryOperator,
 };
 
 #[derive(Debug)]
@@ -72,6 +72,7 @@ fn generate_instruction(insts: &Vec<Instruction>) -> Result<String, CodegenError
                 )
             }
             Instruction::AllocateStack(n) => format!("\tsubq\t${}, %rsp\n", n),
+            Instruction::DeallocateStack(n) => format!("\taddq\t${}, %rsp\n", n),
             Instruction::Binary(op, o1, o2) => {
                 format!(
                     "\t{op}\t{o1},{o2}\n",
@@ -97,9 +98,8 @@ fn generate_instruction(insts: &Vec<Instruction>) -> Result<String, CodegenError
                 generate_1byte_operand(o)?
             ),
             Instruction::Label(identifier) => format!(".L{}:\n", identifier.0),
-            Instruction::DeallocateStack(_) => todo!(),
-            Instruction::Push(operand) => todo!(),
-            Instruction::Call(identifier) => todo!(),
+            Instruction::Push(o) => format!("\tpushq\t{o}\n", o = generate_8byte_operand(o)?),
+            Instruction::Call(identifier) => format!("\tcall\t{}@PLT\n", identifier.0),
         };
 
         code += &op;
@@ -128,20 +128,43 @@ fn generate_binop(op: &BinaryOperator) -> Result<String, CodegenError> {
     }
 }
 
+fn generate_8byte_operand(o: &Operand) -> Result<String, CodegenError> {
+    match o {
+        Operand::Immediate(n) => Ok(format!("${}", n)),
+        Operand::Reg(r) => {
+            let r = match r {
+                Register::AX => "%rax".to_string(),
+                Register::DX => "%rdx".to_string(),
+                Register::CX => "%rcx".to_string(),
+                Register::DI => "%rdi".to_string(),
+                Register::SI => "%rsi".to_string(),
+                Register::R8 => "%r8".to_string(),
+                Register::R9 => "%r9".to_string(),
+                Register::R10 => "%r10".to_string(),
+                Register::R11 => "%r11".to_string(),
+            };
+
+            Ok(format!("{}", r))
+        }
+        Operand::Pseudo(_identifier) => todo!(),
+        Operand::Stack(n) => Ok(format!("{}(%rbp)", n)),
+    }
+}
+
 fn generate_4byte_operand(o: &Operand) -> Result<String, CodegenError> {
     match o {
         Operand::Immediate(n) => Ok(format!("${}", n)),
         Operand::Reg(r) => {
             let r = match r {
-                crate::asm::Register::AX => "%eax".to_string(),
-                crate::asm::Register::DX => "%edx".to_string(),
-                crate::asm::Register::CX => "%ecx".to_string(),
-                crate::asm::Register::R10 => "%r10d".to_string(),
-                crate::asm::Register::R11 => "%r11d".to_string(),
-                crate::asm::Register::DI => todo!(),
-                crate::asm::Register::SI => todo!(),
-                crate::asm::Register::R8 => todo!(),
-                crate::asm::Register::R9 => todo!(),
+                Register::AX => "%eax".to_string(),
+                Register::DX => "%edx".to_string(),
+                Register::CX => "%ecx".to_string(),
+                Register::DI => "%edi".to_string(),
+                Register::SI => "%esi".to_string(),
+                Register::R8 => "%r8d".to_string(),
+                Register::R9 => "%r9d".to_string(),
+                Register::R10 => "%r10d".to_string(),
+                Register::R11 => "%r11d".to_string(),
             };
 
             Ok(format!("{}", r))
@@ -155,15 +178,15 @@ fn generate_1byte_operand(o: &Operand) -> Result<String, CodegenError> {
     match o {
         Operand::Reg(r) => {
             let r = match r {
-                crate::asm::Register::AX => "%al".to_string(),
-                crate::asm::Register::DX => "%dl".to_string(),
-                crate::asm::Register::CX => "%cl".to_string(),
-                crate::asm::Register::R10 => "%r10b".to_string(),
-                crate::asm::Register::R11 => "%r11b".to_string(),
-                crate::asm::Register::DI => todo!(),
-                crate::asm::Register::SI => todo!(),
-                crate::asm::Register::R8 => todo!(),
-                crate::asm::Register::R9 => todo!(),
+                Register::AX => "%al".to_string(),
+                Register::DX => "%dl".to_string(),
+                Register::CX => "%cl".to_string(),
+                Register::DI => "%dil".to_string(),
+                Register::SI => "%sil".to_string(),
+                Register::R8 => "%r8b".to_string(),
+                Register::R9 => "%r9b".to_string(),
+                Register::R10 => "%r10b".to_string(),
+                Register::R11 => "%r11b".to_string(),
             };
 
             Ok(format!("{}", r))

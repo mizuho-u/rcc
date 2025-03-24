@@ -67,15 +67,21 @@ fn main() {
 
     let code = codegen::generate(p).unwrap_or_else(|_| exit(1));
 
+    let mut asm_args = vec!["-x", "assembler", "-"];
+
     let exe_dir = source_path.parent().unwrap();
     let exe_file = source_path.file_stem().unwrap();
+
     let exe_path = exe_dir.join(exe_file);
     let exe_path = exe_path.to_str().unwrap();
-
-    let mut asm_args = vec!["-x", "assembler", "-", "-o", exe_path];
-    if matches!(args.c, Some(true)) {
+    let exe_path = if matches!(args.c, Some(true)) {
         asm_args.push("-c");
-    }
+        format!("{}.o", exe_path)
+    } else {
+        exe_path.to_owned()
+    };
+
+    asm_args.append(&mut vec!["-o", &exe_path]);
 
     let mut assemble = Command::new("gcc")
         .args(&asm_args)
