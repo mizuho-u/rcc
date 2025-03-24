@@ -1,11 +1,9 @@
 use crate::tacky;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 #[derive(PartialEq, Debug)]
 pub enum Program {
-    Program(Function),
+    Program(Vec<Function>),
 }
 
 #[derive(PartialEq, Debug)]
@@ -29,6 +27,9 @@ pub enum Instruction {
     SetCC(JumpCondition, Operand),
     Label(Identifier),
     AllocateStack(i32),
+    DeallocateStack(i32),
+    Push(Operand),
+    Call(Identifier),
     Ret,
 }
 
@@ -73,6 +74,10 @@ pub enum Register {
     AX,
     CX,
     DX,
+    DI,
+    SI,
+    R8,
+    R9,
     R10,
     R11,
 }
@@ -97,30 +102,84 @@ impl From<String> for AssemblyError {
 
 impl std::error::Error for AssemblyError {}
 
+struct Stack {
+    current: i32,
+    ids: HashMap<String, i32>,
+}
+
+impl Stack {
+    pub fn new() -> Stack {
+        Stack {
+            current: 0,
+            ids: HashMap::new(),
+        }
+    }
+
+    pub fn allocate(&mut self, k: &String) -> i32 {
+        if let Some(v) = self.ids.get(k) {
+            *v
+        } else {
+            self.current -= 4;
+            self.ids.insert(k.to_string(), self.current);
+            self.current
+        }
+    }
+}
+
+type StackMap = HashMap<String, Stack>;
+
 pub fn convert(p: tacky::Program) -> Result<Program, AssemblyError> {
     let mut p = convert_program(p)?;
-    replace_pseudo(&mut p)?;
-    fix_instructions(&mut p)?;
+    let mut stack: StackMap = StackMap::new();
+    replace_pseudo(&mut p, &mut stack)?;
+    fix_instructions(&mut p, &stack)?;
     Ok(p)
 }
 
 fn convert_program(p: tacky::Program) -> Result<Program, AssemblyError> {
-    let tacky::Program::Program(func) = p;
+    let tacky::Program::Program(fs) = p;
 
-    // Ok(Program::Program(convert_function(func)?))
-    Err(AssemblyError(format!("not implemented yet")))
+    let fs = fs
+        .iter()
+        .map(|f| convert_function(f))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(Program::Program(fs))
 }
 
-// fn convert_function(f: tacky::Function) -> Result<Function, AssemblyError> {
-//     let tacky::Function::Function(id, body) = f;
+fn convert_function(f: &tacky::Function) -> Result<Function, AssemblyError> {
+    let tacky::Function::Function(id, params, body) = f;
 
-//     Ok(Function::Function {
-//         identifier: Identifier(id.0),
-//         instructions: convert_statement(body)?,
-//     })
-// }
+    let mut instructions = Vec::new();
+    for (i, p) in params.iter().enumerate() {
+        // 6個まではレジスタ
+        if let Some(r) = get_param_register(i) {
+            instructions.push(Instruction::Mov {
+                src: Operand::Reg(r),
+                dst: Operand::Pseudo(Identifier(p.0.to_string())),
+            });
+        } else {
+            // 7個以上はスタックに積まれる
+            let offset: i32 = (16 + (i - 6) * 8).try_into().map_err(|_| {
+                AssemblyError(format!("copy params at index {} to the stack failed.", i))
+            })?;
 
-fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, AssemblyError> {
+            instructions.push(Instruction::Mov {
+                src: Operand::Stack(offset),
+                dst: Operand::Pseudo(Identifier(p.0.to_string())),
+            });
+        }
+    }
+
+    instructions.append(&mut convert_statement(body)?);
+
+    Ok(Function::Function {
+        identifier: Identifier(id.0.to_string()),
+        instructions: instructions,
+    })
+}
+
+fn convert_statement(s: &Vec<tacky::Instruction>) -> Result<Vec<Instruction>, AssemblyError> {
     let mut insts = Vec::new();
 
     for inst in s {
@@ -227,33 +286,106 @@ fn convert_statement(s: Vec<tacky::Instruction>) -> Result<Vec<Instruction>, Ass
                 });
             }
             tacky::Instruction::Jump(identifier) => {
-                insts.push(Instruction::Jmp(Identifier(identifier.0)));
+                insts.push(Instruction::Jmp(Identifier(identifier.0.to_string())));
             }
             tacky::Instruction::JumpIfZero(v, identifier) => {
                 insts.push(Instruction::Cmp(Operand::Immediate(0), convert_exp(v)?));
                 insts.push(Instruction::JmpCC(
                     JumpCondition::E,
-                    Identifier(identifier.0),
+                    Identifier(identifier.0.to_string()),
                 ));
             }
             tacky::Instruction::JumpIfNotZero(v, identifier) => {
                 insts.push(Instruction::Cmp(Operand::Immediate(0), convert_exp(v)?));
                 insts.push(Instruction::JmpCC(
                     JumpCondition::NE,
-                    Identifier(identifier.0),
+                    Identifier(identifier.0.to_string()),
                 ));
             }
             tacky::Instruction::Label(identifier) => {
-                insts.push(Instruction::Label(Identifier(identifier.0)));
+                insts.push(Instruction::Label(Identifier(identifier.0.to_string())));
             }
-            tacky::Instruction::FunctionCall(identifier, vals, val) => todo!(),
+            tacky::Instruction::FunctionCall(name, args, dst) => {
+                insts.append(&mut convert_function_call(name, args, dst)?);
+            }
         }
     }
 
     Ok(insts)
 }
 
-fn convert_binop(op: tacky::BinaryOperator) -> Result<BinaryOperator, AssemblyError> {
+fn convert_function_call(
+    name: &tacky::Identifier,
+    args: &Vec<tacky::Val>,
+    dst: &tacky::Val,
+) -> Result<Vec<Instruction>, AssemblyError> {
+    let mut insts = Vec::new();
+
+    let register_args;
+    let mut stack_args = vec![];
+
+    if args.len() <= 6 {
+        register_args = args.clone();
+    } else {
+        let (l, r) = args.split_at(6);
+        register_args = l.to_vec();
+        stack_args = r.to_vec();
+    }
+
+    // 16byteアライメント
+    let stack_padding = if stack_args.len() % 2 == 0 { 0 } else { 8 };
+    if stack_padding != 0 {
+        insts.push(Instruction::AllocateStack(stack_padding));
+    }
+
+    // レジスタ経由の引数
+    for (i, arg) in register_args.iter().enumerate() {
+        if let Some(r) = get_param_register(i) {
+            let arg = convert_exp(arg)?;
+            insts.push(Instruction::Mov {
+                src: arg,
+                dst: Operand::Reg(r),
+            });
+        }
+    }
+
+    // スタック経由の引数
+    for arg in stack_args.iter().rev() {
+        let arg = convert_exp(arg)?;
+        match arg {
+            Operand::Immediate(_) | Operand::Reg(_) => {
+                insts.push(Instruction::Push(arg));
+            }
+            // 4byteはレジスタにコピーして8byteでpush
+            _ => {
+                insts.push(Instruction::Mov {
+                    src: arg,
+                    dst: Operand::Reg(Register::AX),
+                });
+                insts.push(Instruction::Push(Operand::Reg(Register::AX)));
+            }
+        }
+    }
+
+    // 関数呼び出し
+    insts.push(Instruction::Call(Identifier(name.0.to_string())));
+
+    // スタック経由の引数を除外
+    let bytes_to_remove = 8 * stack_args.len() as i32 + stack_padding;
+    if bytes_to_remove != 0 {
+        insts.push(Instruction::DeallocateStack(bytes_to_remove));
+    }
+
+    // 関数の結果はAXに入っているのでコピー先に入れる
+    insts.push(Instruction::Mov {
+        src: Operand::Reg(Register::AX),
+        dst: convert_exp(dst)?,
+    });
+
+    Ok(insts)
+}
+
+fn convert_binop(op: &tacky::BinaryOperator) -> Result<BinaryOperator, AssemblyError> {
     match op {
         tacky::BinaryOperator::Add => Ok(BinaryOperator::Add),
         tacky::BinaryOperator::Subtract => Ok(BinaryOperator::Sub),
@@ -267,7 +399,7 @@ fn convert_binop(op: tacky::BinaryOperator) -> Result<BinaryOperator, AssemblyEr
     }
 }
 
-fn convert_uop(op: tacky::UnaryOperator) -> Result<UnaryOperator, AssemblyError> {
+fn convert_uop(op: &tacky::UnaryOperator) -> Result<UnaryOperator, AssemblyError> {
     match op {
         tacky::UnaryOperator::Complement => Ok(UnaryOperator::Not),
         tacky::UnaryOperator::Negate => Ok(UnaryOperator::Neg),
@@ -275,7 +407,7 @@ fn convert_uop(op: tacky::UnaryOperator) -> Result<UnaryOperator, AssemblyError>
     }
 }
 
-fn jump_condition_from(op: tacky::BinaryOperator) -> Result<JumpCondition, AssemblyError> {
+fn jump_condition_from(op: &tacky::BinaryOperator) -> Result<JumpCondition, AssemblyError> {
     match op {
         tacky::BinaryOperator::Equal => Ok(JumpCondition::E),
         tacky::BinaryOperator::NotEqual => Ok(JumpCondition::NE),
@@ -289,52 +421,59 @@ fn jump_condition_from(op: tacky::BinaryOperator) -> Result<JumpCondition, Assem
     }
 }
 
-fn convert_exp(e: tacky::Val) -> Result<Operand, AssemblyError> {
+fn convert_exp(e: &tacky::Val) -> Result<Operand, AssemblyError> {
     let op = match e {
-        tacky::Val::Constant(n) => Operand::Immediate(n),
-        tacky::Val::Var(id) => Operand::Pseudo(Identifier(id.0)),
+        tacky::Val::Constant(n) => Operand::Immediate(*n),
+        tacky::Val::Var(id) => Operand::Pseudo(Identifier(id.0.to_string())),
     };
 
     Ok(op)
 }
 
-fn replace_pseudo(p: &mut Program) -> Result<(), AssemblyError> {
-    let Program::Program(f) = p;
-    let Function::Function {
-        identifier: _,
-        instructions,
-    } = f;
+fn replace_pseudo(p: &mut Program, stack_map: &mut StackMap) -> Result<(), AssemblyError> {
+    let Program::Program(fs) = p;
 
-    for inst in instructions {
-        match inst {
-            Instruction::Mov { src, dst } => {
-                replace_operand(src)?;
-                replace_operand(dst)?;
+    for f in fs {
+        let Function::Function {
+            identifier: f_name,
+            instructions,
+        } = f;
+
+        stack_map.insert(f_name.0.to_string(), Stack::new());
+        let mut stack = stack_map.get_mut(&f_name.0).unwrap();
+
+        for inst in instructions {
+            match inst {
+                Instruction::Mov { src, dst } => {
+                    replace_operand(&mut stack, src)?;
+                    replace_operand(&mut stack, dst)?;
+                }
+                Instruction::Unary(_, o) => replace_operand(&mut stack, o)?,
+                Instruction::Binary(_, src, dst) => {
+                    replace_operand(&mut stack, src)?;
+                    replace_operand(&mut stack, dst)?;
+                }
+                Instruction::Idiv(operand) => {
+                    replace_operand(&mut stack, operand)?;
+                }
+                Instruction::Cmp(o1, o2) => {
+                    replace_operand(&mut stack, o1)?;
+                    replace_operand(&mut stack, o2)?;
+                }
+                Instruction::SetCC(_, o) => replace_operand(&mut stack, o)?,
+                Instruction::Push(o) => replace_operand(&mut stack, o)?,
+                _ => {}
             }
-            Instruction::Unary(_, o) => replace_operand(o)?,
-            Instruction::Binary(_, src, dst) => {
-                replace_operand(src)?;
-                replace_operand(dst)?;
-            }
-            Instruction::Idiv(operand) => {
-                replace_operand(operand)?;
-            }
-            Instruction::Cmp(o1, o2) => {
-                replace_operand(o1)?;
-                replace_operand(o2)?;
-            }
-            Instruction::SetCC(_, o) => replace_operand(o)?,
-            _ => {}
         }
     }
 
     Ok(())
 }
 
-fn replace_operand(o: &mut Operand) -> Result<(), AssemblyError> {
-    match o {
+fn replace_operand(stack: &mut Stack, op: &mut Operand) -> Result<(), AssemblyError> {
+    match op {
         Operand::Pseudo(id) => {
-            *o = Operand::Stack(allocate_stack(&id.0));
+            *op = Operand::Stack(stack.allocate(&id.0));
         }
         _ => {}
     }
@@ -342,59 +481,50 @@ fn replace_operand(o: &mut Operand) -> Result<(), AssemblyError> {
     Ok(())
 }
 
-fn allocate_stack(id: &String) -> i32 {
+fn get_param_register(index: usize) -> Option<Register> {
     thread_local!(
-        pub static COUNT: Rc<RefCell<i32>> = Rc::new(RefCell::new(0));
-
-        pub static MAP_MUT: RefCell<HashMap<String, i32>> = {
-            let m = HashMap::new();
-            RefCell::new(m)
-        }
+        static PARAM_REGISTER: Vec<Register> = vec![
+            Register::DI,
+            Register::SI,
+            Register::DX,
+            Register::CX,
+            Register::R8,
+            Register::R9,
+        ];
     );
 
-    let mut stack = 0;
-
-    MAP_MUT.with(|m| {
-        let mut m_ref = m.borrow_mut();
-
-        if let Some(cnt) = m_ref.get(id) {
-            stack = *cnt;
-        } else {
-            let rc: Rc<RefCell<i32>> = get_stack();
-            let mut m = rc.borrow_mut();
-            *m -= 4;
-            stack = *m;
-
-            m_ref.insert(id.to_string(), stack);
-        }
-    });
-
-    stack
+    PARAM_REGISTER.with(|rs| rs.get(index).and_then(|v| Some(v.clone())))
 }
 
-fn get_stack() -> Rc<RefCell<i32>> {
-    thread_local!(
-        pub static COUNT: Rc<RefCell<i32>> = Rc::new(RefCell::new(0));
-    );
+fn fix_instructions(p: &mut Program, stack_map: &StackMap) -> Result<(), AssemblyError> {
+    let Program::Program(fs) = p;
 
-    COUNT.with(|rc| rc.clone())
-}
+    for f in fs {
+        let Function::Function {
+            identifier: f_name,
+            ref mut instructions,
+        } = f;
 
-fn fix_instructions(p: &mut Program) -> Result<(), AssemblyError> {
-    let Program::Program(f) = p;
-    let Function::Function {
-        identifier: _,
-        ref mut instructions,
-    } = f;
+        let stack = stack_map.get(&f_name.0).unwrap();
 
-    insert_allocate_stack(instructions)?;
-    *instructions = rewrite_stack_operand(instructions)?;
+        insert_allocate_stack(stack, instructions)?;
+        *instructions = rewrite_stack_operand(instructions)?;
+    }
 
     Ok(())
 }
 
-fn insert_allocate_stack(instructions: &mut Vec<Instruction>) -> Result<(), AssemblyError> {
-    instructions.insert(0, Instruction::AllocateStack(-*get_stack().borrow()));
+fn insert_allocate_stack(
+    stack: &Stack,
+    instructions: &mut Vec<Instruction>,
+) -> Result<(), AssemblyError> {
+    let stack_size = if stack.current % 16 == 0 {
+        -stack.current
+    } else {
+        -stack.current + (16 + stack.current % 16)
+    };
+
+    instructions.insert(0, Instruction::AllocateStack(stack_size));
 
     Ok(())
 }

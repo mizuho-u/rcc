@@ -24,17 +24,20 @@ pub fn generate(p: Program) -> Result<String, CodegenError> {
 }
 
 fn generate_program(p: Program) -> Result<String, CodegenError> {
-    let Program::Program(f) = p;
+    let Program::Program(fs) = p;
 
     let code = format!(
         "{}\n\t.section\t.note.GNU-stack,\"\",@progbits\n",
-        generate_function(f)?
+        fs.iter()
+            .map(|f| generate_function(f))
+            .collect::<Result<Vec<_>, _>>()?
+            .join("\n")
     );
 
     Ok(code)
 }
 
-fn generate_function(f: Function) -> Result<String, CodegenError> {
+fn generate_function(f: &Function) -> Result<String, CodegenError> {
     let Function::Function {
         identifier: id,
         instructions: insts,
@@ -50,7 +53,7 @@ fn generate_function(f: Function) -> Result<String, CodegenError> {
     Ok(code)
 }
 
-fn generate_instruction(insts: Vec<Instruction>) -> Result<String, CodegenError> {
+fn generate_instruction(insts: &Vec<Instruction>) -> Result<String, CodegenError> {
     let mut code = String::new();
 
     for inst in insts {
@@ -94,6 +97,9 @@ fn generate_instruction(insts: Vec<Instruction>) -> Result<String, CodegenError>
                 generate_1byte_operand(o)?
             ),
             Instruction::Label(identifier) => format!(".L{}:\n", identifier.0),
+            Instruction::DeallocateStack(_) => todo!(),
+            Instruction::Push(operand) => todo!(),
+            Instruction::Call(identifier) => todo!(),
         };
 
         code += &op;
@@ -102,14 +108,14 @@ fn generate_instruction(insts: Vec<Instruction>) -> Result<String, CodegenError>
     Ok(code)
 }
 
-fn generate_uop(op: UnaryOperator) -> Result<String, CodegenError> {
+fn generate_uop(op: &UnaryOperator) -> Result<String, CodegenError> {
     match op {
         UnaryOperator::Neg => Ok("negl".to_string()),
         UnaryOperator::Not => Ok("notl".to_string()),
     }
 }
 
-fn generate_binop(op: BinaryOperator) -> Result<String, CodegenError> {
+fn generate_binop(op: &BinaryOperator) -> Result<String, CodegenError> {
     match op {
         BinaryOperator::Add => Ok("addl".to_string()),
         BinaryOperator::Sub => Ok("subl".to_string()),
@@ -122,7 +128,7 @@ fn generate_binop(op: BinaryOperator) -> Result<String, CodegenError> {
     }
 }
 
-fn generate_4byte_operand(o: Operand) -> Result<String, CodegenError> {
+fn generate_4byte_operand(o: &Operand) -> Result<String, CodegenError> {
     match o {
         Operand::Immediate(n) => Ok(format!("${}", n)),
         Operand::Reg(r) => {
@@ -132,6 +138,10 @@ fn generate_4byte_operand(o: Operand) -> Result<String, CodegenError> {
                 crate::asm::Register::CX => "%ecx".to_string(),
                 crate::asm::Register::R10 => "%r10d".to_string(),
                 crate::asm::Register::R11 => "%r11d".to_string(),
+                crate::asm::Register::DI => todo!(),
+                crate::asm::Register::SI => todo!(),
+                crate::asm::Register::R8 => todo!(),
+                crate::asm::Register::R9 => todo!(),
             };
 
             Ok(format!("{}", r))
@@ -141,7 +151,7 @@ fn generate_4byte_operand(o: Operand) -> Result<String, CodegenError> {
     }
 }
 
-fn generate_1byte_operand(o: Operand) -> Result<String, CodegenError> {
+fn generate_1byte_operand(o: &Operand) -> Result<String, CodegenError> {
     match o {
         Operand::Reg(r) => {
             let r = match r {
@@ -150,6 +160,10 @@ fn generate_1byte_operand(o: Operand) -> Result<String, CodegenError> {
                 crate::asm::Register::CX => "%cl".to_string(),
                 crate::asm::Register::R10 => "%r10b".to_string(),
                 crate::asm::Register::R11 => "%r11b".to_string(),
+                crate::asm::Register::DI => todo!(),
+                crate::asm::Register::SI => todo!(),
+                crate::asm::Register::R8 => todo!(),
+                crate::asm::Register::R9 => todo!(),
             };
 
             Ok(format!("{}", r))
@@ -158,7 +172,7 @@ fn generate_1byte_operand(o: Operand) -> Result<String, CodegenError> {
     }
 }
 
-fn generate_cond_code(cond: JumpCondition) -> String {
+fn generate_cond_code(cond: &JumpCondition) -> String {
     match cond {
         JumpCondition::E => "e".to_string(),
         JumpCondition::NE => "ne".to_string(),

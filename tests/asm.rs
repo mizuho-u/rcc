@@ -12,7 +12,7 @@ fn immediate() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
                 Instruction::AllocateStack(0),
@@ -22,7 +22,7 @@ fn immediate() {
                 },
                 Instruction::Ret
             ]
-        })
+        }])
     );
 }
 
@@ -32,10 +32,10 @@ fn allocate_stack() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
-                Instruction::AllocateStack(8),
+                Instruction::AllocateStack(16),
                 Instruction::Mov {
                     src: Operand::Immediate(1),
                     dst: Operand::Stack(-4)
@@ -56,7 +56,7 @@ fn allocate_stack() {
                 },
                 Instruction::Ret
             ]
-        })
+        }])
     );
 }
 
@@ -66,10 +66,10 @@ fn binop1() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
-                Instruction::AllocateStack(4),
+                Instruction::AllocateStack(16),
                 Instruction::Mov {
                     src: Operand::Immediate(1),
                     dst: Operand::Stack(-4)
@@ -85,7 +85,7 @@ fn binop1() {
                 },
                 Instruction::Ret
             ]
-        })
+        }])
     );
 }
 
@@ -95,10 +95,10 @@ fn binop2() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
-                Instruction::AllocateStack(4),
+                Instruction::AllocateStack(16),
                 Instruction::Mov {
                     src: Operand::Immediate(1),
                     dst: Operand::Stack(-4)
@@ -122,7 +122,7 @@ fn binop2() {
                 },
                 Instruction::Ret
             ]
-        })
+        }])
     );
 }
 
@@ -132,10 +132,10 @@ fn binop3() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
-                Instruction::AllocateStack(4),
+                Instruction::AllocateStack(16),
                 Instruction::Mov {
                     src: Operand::Immediate(1),
                     dst: Operand::Reg(Register::AX),
@@ -156,7 +156,7 @@ fn binop3() {
                 },
                 Instruction::Ret
             ]
-        })
+        }])
     );
 }
 
@@ -166,10 +166,10 @@ fn binop4() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
-                Instruction::AllocateStack(8),
+                Instruction::AllocateStack(16),
                 Instruction::Mov {
                     src: Operand::Immediate(3),
                     dst: Operand::Stack(-4)
@@ -202,7 +202,7 @@ fn binop4() {
                 },
                 Instruction::Ret
             ]
-        })
+        }])
     );
 }
 
@@ -212,10 +212,10 @@ fn binop5() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
-                Instruction::AllocateStack(20),
+                Instruction::AllocateStack(32),
                 Instruction::Mov {
                     src: Operand::Immediate(4),
                     dst: Operand::Stack(-4)
@@ -283,7 +283,7 @@ fn binop5() {
                 },
                 Instruction::Ret
             ]
-        }),
+        }]),
         "{result:#?}"
     );
 }
@@ -294,10 +294,10 @@ fn logical_operator() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
-                Instruction::AllocateStack(12),
+                Instruction::AllocateStack(16),
                 // !1
                 Instruction::Mov {
                     src: Operand::Immediate(1),
@@ -357,7 +357,7 @@ fn logical_operator() {
                 },
                 Instruction::Ret
             ]
-        }),
+        }]),
         "{result:#?}"
     );
 }
@@ -369,10 +369,10 @@ fn relational_operator() {
 
     assert_eq!(
         result,
-        Program::Program(Function::Function {
+        Program::Program(vec![Function::Function {
             identifier: Identifier("main".to_string()),
             instructions: vec![
-                Instruction::AllocateStack(24),
+                Instruction::AllocateStack(32),
                 // (1 == 2)
                 Instruction::Mov {
                     src: Operand::Immediate(1),
@@ -433,8 +433,488 @@ fn relational_operator() {
                 },
                 Instruction::Ret
             ]
-        }),
+        }]),
         "{result:#?}"
+    );
+}
+
+#[test]
+fn function_definition_six_param() {
+    let result = tokenize_to_convert(
+        "
+        int foo(int a, int b, int c, int d, int e, int f) {
+            return a + b;
+        }
+        ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![Function::Function {
+            identifier: Identifier("foo".to_string()),
+            instructions: vec![
+                Instruction::AllocateStack(32),
+                Instruction::Mov {
+                    src: Operand::Reg(Register::DI),
+                    dst: Operand::Stack(-4),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::SI),
+                    dst: Operand::Stack(-8),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::DX),
+                    dst: Operand::Stack(-12),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::CX),
+                    dst: Operand::Stack(-16),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R8),
+                    dst: Operand::Stack(-20),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R9),
+                    dst: Operand::Stack(-24),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(-4),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R10),
+                    dst: Operand::Stack(-28),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(-8),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Operand::Reg(Register::R10),
+                    Operand::Stack(-28),
+                ),
+                Instruction::Mov {
+                    src: Operand::Stack(-28),
+                    dst: Operand::Reg(Register::AX),
+                },
+                Instruction::Ret
+            ]
+        },])
+    );
+}
+
+#[test]
+fn function_definition_seven_param() {
+    let result = tokenize_to_convert(
+        "
+        int foo(int a, int b, int c, int d, int e, int f, int g) {
+            return a + b;
+        }
+        ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![Function::Function {
+            identifier: Identifier("foo".to_string()),
+            instructions: vec![
+                Instruction::AllocateStack(32),
+                Instruction::Mov {
+                    src: Operand::Reg(Register::DI),
+                    dst: Operand::Stack(-4),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::SI),
+                    dst: Operand::Stack(-8),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::DX),
+                    dst: Operand::Stack(-12),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::CX),
+                    dst: Operand::Stack(-16),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R8),
+                    dst: Operand::Stack(-20),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R9),
+                    dst: Operand::Stack(-24),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(16),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R10),
+                    dst: Operand::Stack(-28),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(-4),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R10),
+                    dst: Operand::Stack(-32),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(-8),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Operand::Reg(Register::R10),
+                    Operand::Stack(-32),
+                ),
+                Instruction::Mov {
+                    src: Operand::Stack(-32),
+                    dst: Operand::Reg(Register::AX),
+                },
+                Instruction::Ret
+            ]
+        },])
+    );
+}
+
+#[test]
+fn function_definition_eight_param() {
+    let result = tokenize_to_convert(
+        "
+        int foo(int a, int b, int c, int d, int e, int f, int g, int h) {
+            return a + b;
+        }
+        ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![Function::Function {
+            identifier: Identifier("foo".to_string()),
+            instructions: vec![
+                Instruction::AllocateStack(48),
+                Instruction::Mov {
+                    src: Operand::Reg(Register::DI),
+                    dst: Operand::Stack(-4),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::SI),
+                    dst: Operand::Stack(-8),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::DX),
+                    dst: Operand::Stack(-12),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::CX),
+                    dst: Operand::Stack(-16),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R8),
+                    dst: Operand::Stack(-20),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R9),
+                    dst: Operand::Stack(-24),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(16),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R10),
+                    dst: Operand::Stack(-28),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(24),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R10),
+                    dst: Operand::Stack(-32),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(-4),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Mov {
+                    src: Operand::Reg(Register::R10),
+                    dst: Operand::Stack(-36),
+                },
+                Instruction::Mov {
+                    src: Operand::Stack(-8),
+                    dst: Operand::Reg(Register::R10),
+                },
+                Instruction::Binary(
+                    BinaryOperator::Add,
+                    Operand::Reg(Register::R10),
+                    Operand::Stack(-36),
+                ),
+                Instruction::Mov {
+                    src: Operand::Stack(-36),
+                    dst: Operand::Reg(Register::AX),
+                },
+                Instruction::Ret
+            ]
+        },])
+    );
+}
+
+#[test]
+fn function_call_six_param() {
+    let result = tokenize_to_convert(
+        "
+        int foo(int a, int b, int c, int d, int e, int f) {
+            return a + b;
+        }
+
+        int main(void) {
+            int a = 1;
+            return foo(a, 2, 3, 4, 5, 6);
+        }
+        ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            Function::Function {
+                identifier: Identifier("foo".to_string()),
+                instructions: vec![
+                    Instruction::AllocateStack(32),
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::DI),
+                        dst: Operand::Stack(-4),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::SI),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::DX),
+                        dst: Operand::Stack(-12),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::CX),
+                        dst: Operand::Stack(-16),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R8),
+                        dst: Operand::Stack(-20),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R9),
+                        dst: Operand::Stack(-24),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R10),
+                        dst: Operand::Stack(-28),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-8),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Add,
+                        Operand::Reg(Register::R10),
+                        Operand::Stack(-28),
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Stack(-28),
+                        dst: Operand::Reg(Register::AX),
+                    },
+                    Instruction::Ret
+                ]
+            },
+            Function::Function {
+                identifier: Identifier("main".to_string()),
+                instructions: vec![
+                    Instruction::AllocateStack(16),
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Stack(-4),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::DI),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(2),
+                        dst: Operand::Reg(Register::SI),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(3),
+                        dst: Operand::Reg(Register::DX),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(4),
+                        dst: Operand::Reg(Register::CX),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(5),
+                        dst: Operand::Reg(Register::R8),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(6),
+                        dst: Operand::Reg(Register::R9),
+                    },
+                    Instruction::Call(Identifier("foo".to_string())),
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::AX),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-8),
+                        dst: Operand::Reg(Register::AX),
+                    },
+                    Instruction::Ret
+                ]
+            }
+        ])
+    );
+}
+
+#[test]
+fn function_call_eight_param() {
+    let result = tokenize_to_convert(
+        "
+        int foo(int a, int b, int c, int d, int e, int f, int g, int h) {
+            return a + b;
+        }
+
+        int main(void) {
+            int a = 1;
+            return foo(a, 2, 3, 4, 5, 6, 7, 8);
+        }
+        ",
+    );
+
+    assert_eq!(
+        result,
+        Program::Program(vec![
+            Function::Function {
+                identifier: Identifier("foo".to_string()),
+                instructions: vec![
+                    Instruction::AllocateStack(48),
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::DI),
+                        dst: Operand::Stack(-4),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::SI),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::DX),
+                        dst: Operand::Stack(-12),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::CX),
+                        dst: Operand::Stack(-16),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R8),
+                        dst: Operand::Stack(-20),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R9),
+                        dst: Operand::Stack(-24),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(16),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R10),
+                        dst: Operand::Stack(-28),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(24),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R10),
+                        dst: Operand::Stack(-32),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::R10),
+                        dst: Operand::Stack(-36),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-8),
+                        dst: Operand::Reg(Register::R10),
+                    },
+                    Instruction::Binary(
+                        BinaryOperator::Add,
+                        Operand::Reg(Register::R10),
+                        Operand::Stack(-36),
+                    ),
+                    Instruction::Mov {
+                        src: Operand::Stack(-36),
+                        dst: Operand::Reg(Register::AX),
+                    },
+                    Instruction::Ret
+                ]
+            },
+            Function::Function {
+                identifier: Identifier("main".to_string()),
+                instructions: vec![
+                    Instruction::AllocateStack(16),
+                    Instruction::Mov {
+                        src: Operand::Immediate(1),
+                        dst: Operand::Stack(-4),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-4),
+                        dst: Operand::Reg(Register::DI),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(2),
+                        dst: Operand::Reg(Register::SI),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(3),
+                        dst: Operand::Reg(Register::DX),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(4),
+                        dst: Operand::Reg(Register::CX),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(5),
+                        dst: Operand::Reg(Register::R8),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Immediate(6),
+                        dst: Operand::Reg(Register::R9),
+                    },
+                    Instruction::Push(Operand::Immediate(8)),
+                    Instruction::Push(Operand::Immediate(7)),
+                    Instruction::Call(Identifier("foo".to_string())),
+                    Instruction::DeallocateStack(16),
+                    Instruction::Mov {
+                        src: Operand::Reg(Register::AX),
+                        dst: Operand::Stack(-8),
+                    },
+                    Instruction::Mov {
+                        src: Operand::Stack(-8),
+                        dst: Operand::Reg(Register::AX),
+                    },
+                    Instruction::Ret
+                ]
+            }
+        ])
     );
 }
 
